@@ -188,7 +188,7 @@ void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
     NetworkPlayer *np = getNetworkPlayerFromPeerId(peerId);
     if (np) {
         int idx = np->globalIndex;
-        Logging::log("SERVER", "Player {} disconnected via CoopNet peer drop", np->name);
+        Logging::log("NETWORK", "Player {} disconnected via CoopNet peer drop", np->name);
         np->connected = false;
         np->type = 0;
         np->globalIndex = 0;

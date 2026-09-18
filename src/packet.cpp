@@ -429,7 +429,7 @@ void CoopPacket::execute() {
             uint64_t requestOffset = read<uint64_t>();
 
             uint64_t totalModsSize = 0;
-            for (auto &mod : gServerConfig.mods) {
+            for (const auto &mod : gServerConfig.mods) {
                 totalModsSize += mod.size;
             }
 
@@ -441,13 +441,13 @@ void CoopPacket::execute() {
                 uint64_t chunkFill = 0;
                 uint64_t fileStartOffset = 0;
 
-                for (auto &mod : gServerConfig.mods) {
+                for (const auto &mod : gServerConfig.mods) {
                     if ((fileStartOffset + mod.size) < sendOffset) {
                         fileStartOffset += mod.size;
                         continue;
                     }
 
-                    for (auto &modFile : mod.files) {
+                    for (const auto &modFile : mod.files) {
                         if ((fileStartOffset + modFile.size) < sendOffset) {
                             fileStartOffset += modFile.size;
                             continue;

@@ -29,5 +29,7 @@ int main(int argc, char *argv[]) {
     CoopLobby lobby(gServerConfig.port);
     lobby.start();
 
+    gServerConfig.write(SERVER_CONFIGFILE);
+
     return 0;
 }
