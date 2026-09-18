@@ -55,6 +55,11 @@ void ServerConfig::read(const std::string &filename) {
 }
 
 void ServerConfig::write(const std::string &filename) {
+    json modPaths = json::array();
+    for (const auto &mod : mods) {
+        modPaths.push_back(mod.basePath);
+    }
+
     json data = {
         {"port", port},
         {"networkSystem", networkSystem},
@@ -74,7 +79,8 @@ void ServerConfig::write(const std::string &filename) {
         {"headless", headless},
         {"nametags", nametags},
         {"maxPlayers", maxPlayers},
-        {"pauseAnywhere", pauseAnywhere}
+        {"pauseAnywhere", pauseAnywhere},
+        {"mods", modPaths}
     };
 
     std::ofstream file(filename);
