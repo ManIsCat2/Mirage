@@ -33,7 +33,7 @@ COOPNET_LIB :=
 
 # setup linker flags
 ifeq ($(WINDOWS_BUILD),1)
-	CXX := g++ # use g++ for for the c++ compiler by default
+	CXX := g++ # use g++ for the c++ compiler by default
 	LDFLAGS += -Llib/win64 -lcoopnet -ljuice -lws2_32 -liphlpapi -lbcrypt -static
 else ifeq ($(OSX_BUILD),1)
 	ifeq ($(ARM_BUILD),1)
@@ -56,6 +56,9 @@ all: $(BUILD_DIR) $(BUILD_DIR)/$(TARGET)
 
 $(BUILD_DIR)/$(TARGET): $(OBJECTS)
 	$(CXX) $(OBJECTS) -o $@ $(LDFLAGS)
+ifeq ($(OSX_BUILD),1)
+	cp $(COOPNET_LIB) $(BUILD_DIR)/
+endif
 
 $(BUILD_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -63,7 +66,6 @@ $(BUILD_DIR)/%.o: %.cpp
 
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
-	cp $(COOPNET_LIB) $(BUILD_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR)
