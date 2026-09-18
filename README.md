@@ -4,24 +4,45 @@
 ---
 **Mirage** is currently still a work in progress but it's functional in its current state and it supports CoopNet and Direct Connect as network types (Direct Connect requires you to port forward)
 
-# How to Use
+# Building
 
-## 1. Clone the Repository
+## 1. Install dependencies
+### Ubuntu / Debian
+```bash
+sudo apt install build-essential clang libz-dev
+```
+
+### Arch Linux
+```bash
+sudo pacman -S base-devel clang zlib
+```
+
+### Fedora
+```bash
+sudo dnf install make clang zlib-devel
+```
+
+### Windows (MinGW)
+```bash
+pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-zlib
+```
+
+## 2. Clone the Repository
 
 ```bash
 git clone https://github.com/ManIsCat2/Mirage
 cd Mirage
 ```
 
-## 2. Build
-(You can use MinGW and UCRT on Windows to to do this)
+## 3. Build
 ```bash
 make -j$(nproc)
 ```
 
 The compiled binary will be saved in the `build/` directory.
 
-## 3. Run
+# Running
+Run the program when you're in the Mirage folder:
 ```bash
 ./build/Mirage
 ```
