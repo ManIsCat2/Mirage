@@ -110,10 +110,10 @@ public:
 };
 
 extern std::unique_ptr<NetworkSystem> gNetworkSystem;
-NetworkPlayer *getNetworkPlayerFromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum);
-NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex);
-NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a);
-NetworkPlayer *getNetworkPlayerFromPeerId(uint64_t peerId);
+extern NetworkPlayer *getNetworkPlayerFromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum);
+extern NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex);
+extern NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a);
+extern NetworkPlayer *getNetworkPlayerFromPeerId(uint64_t peerId);
 
-bool networkInit(NetworkSystemType type, int port);
-void networkShutdown();
+extern bool networkInit(NetworkSystemType type, int port);
+extern void networkShutdown();

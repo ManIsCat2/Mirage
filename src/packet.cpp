@@ -307,7 +307,7 @@ void CoopPacket::processOrdered() {
 }
 
 void CoopPacket::execute() {
-    NetworkPlayer *senderNp = gNetworkSystem ? gNetworkSystem->getPlayerFromSender(addr, peerId) : nullptr;
+    NetworkPlayer *senderNp = gNetworkSystem->getPlayerFromSender(addr, peerId);
     uint8_t senderGlobalIndex = senderNp ? senderNp->globalIndex : 0;
 
     switch (pktType) {
@@ -315,7 +315,7 @@ void CoopPacket::execute() {
             uint16_t ackedSeq = read<uint16_t>();
             gReliablePackets.remove_if([this, ackedSeq](const ReliablePacket &p) {
                 if (p.seqId != ackedSeq) return false;
-                return gNetworkSystem ? gNetworkSystem->isSameEndpoint(p.addr, p.peerId, this->addr, this->peerId) : false;
+                return gNetworkSystem->isSameEndpoint(p.addr, p.peerId, this->addr, this->peerId);
             });
             break;
         }
@@ -328,7 +328,6 @@ void CoopPacket::execute() {
         case PACKET_SPAWN_OBJECTS:
         case PACKET_SPAWN_STAR:
         case PACKET_SPAWN_STAR_NLE:
-        case PACKET_LUA_SYNC_TABLE:
         case PACKET_LEVEL_RESPAWN_INFO:
             break;
 
@@ -649,7 +648,7 @@ void CoopPacket::execute() {
             int16_t levelNum = read<int16_t>();
             int16_t areaIndex = read<int16_t>();
 
-            NetworkPlayer *np = gNetworkSystem ? gNetworkSystem->getPlayerFromSender(addr, peerId) : nullptr;
+            NetworkPlayer *np = gNetworkSystem->getPlayerFromSender(addr, peerId);
             if (np) {
                 Logging::log("SERVER", "Received level change from {}", np->name);
                 np->currCourseNum = courseNum;
