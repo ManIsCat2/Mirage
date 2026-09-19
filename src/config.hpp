@@ -19,6 +19,7 @@ public:
     std::string mode = "";
     std::string description = "";
     std::string password = "";
+    bool executeMods = false;
     int savefileIndex = 1;
     int playerInteractions = 1;
     int bouncyBounds = 0;

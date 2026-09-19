@@ -26,6 +26,7 @@ void ServerConfig::read(const std::string &filename) {
     mode = data.value("mode", mode);
     description = data.value("description", description);
     password = data.value("password", password);
+    executeMods = data.value("executeMods", executeMods);
     savefileIndex = data.value("savefileIndex", savefileIndex);
     playerInteractions = data.value("playerInteractions", playerInteractions);
     bouncyBounds = data.value("bouncyBounds", bouncyBounds);
@@ -69,6 +70,7 @@ void ServerConfig::write(const std::string &filename) {
         {"mode", mode},
         {"description", description},
         {"password", password},
+        {"executeMods", executeMods},
         {"savefileIndex", savefileIndex},
         {"playerInteractions", playerInteractions},
         {"bouncyBounds", bouncyBounds},
