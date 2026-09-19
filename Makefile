@@ -3,7 +3,7 @@ TARGET := Mirage
 BUILD_DIR := build
 CXX := clang++
 ASAN := 0
-CXXFLAGS := -O3 -Iinclude -std=c++23
+CXXFLAGS := -O3 -Iinclude -std=c++23 -MMD -MP
 LDFLAGS := -lz
 
 WINDOWS_BUILD := 0
@@ -51,6 +51,7 @@ endif
 
 SOURCES := $(wildcard $(addsuffix /*.cpp,$(DIRECTORIES)))
 OBJECTS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(SOURCES))
+DEPS := $(OBJECTS:.o=.d)
 
 all: $(BUILD_DIR) $(BUILD_DIR)/$(TARGET)
 
@@ -69,5 +70,7 @@ $(BUILD_DIR):
 
 clean:
 	rm -rf $(BUILD_DIR)
+
+-include $(DEPS)
 
 .PHONY: all clean
