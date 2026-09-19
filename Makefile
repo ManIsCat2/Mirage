@@ -4,7 +4,7 @@ BUILD_DIR := build
 CXX := clang++
 ASAN := 0
 CXXFLAGS := -O3 -Iinclude -std=c++23 -MMD -MP
-LDFLAGS := -lz
+LDFLAGS := -lz -llua
 
 WINDOWS_BUILD := 0
 LINUX_BUILD := 0
