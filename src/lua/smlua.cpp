@@ -1,7 +1,9 @@
 #include "smlua.hpp"
+#include "constants.hpp"
 #include "log.hpp"
 #include <iostream>
 #include <filesystem>
+#include <lualib.h>
 
 namespace fs = std::filesystem;
 
@@ -17,11 +19,25 @@ SMLua::~SMLua() {
 
 bool SMLua::init() {
     if (L) return true;
-    
     L = luaL_newstate();
+
     if (!L) return false;
-    
-    luaL_openlibs(L);
+
+    luaopen_base(L);
+    luaL_requiref(L, "math", luaopen_math, 1);
+    luaL_requiref(L, "string", luaopen_string, 1);
+    luaL_requiref(L, "table", luaopen_table, 1);
+    luaL_requiref(L, "coroutine", luaopen_coroutine, 1);
+    luaL_requiref(L, "utf8", luaopen_utf8, 1);
+
+    int result = luaL_dostring(L, gSMLuaConstants);
+    if (result != LUA_OK) {
+        Logging::log("SMLUA", "Lua error: {}", lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return false;
+    }
+    lua_settop(L, 0);
+
     return true;
 }
 

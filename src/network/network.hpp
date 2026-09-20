@@ -45,7 +45,7 @@ enum NetworkPlayerType {
 };
 
 extern std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers;
-extern std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerSockets;
+extern std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs;
 extern std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds;
 
 class NetworkSystem {

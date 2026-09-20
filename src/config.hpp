@@ -1,6 +1,6 @@
 #pragma once
 
-#include "network.hpp"
+#include "network/network.hpp"
 #include "mod.hpp"
 
 #include <fstream>

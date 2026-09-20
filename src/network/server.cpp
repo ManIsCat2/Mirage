@@ -2,7 +2,7 @@
 #include "packet.hpp"
 #include "network.hpp"
 #include "log.hpp"
-#include "config.hpp"
+#include "../config.hpp"
 
 std::atomic<bool> gServerRunning{true};
 

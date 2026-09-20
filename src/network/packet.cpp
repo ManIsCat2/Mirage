@@ -1,7 +1,7 @@
 #include "packet.hpp"
 #include "network.hpp"
-#include "config.hpp"
-#include "savefile.hpp"
+#include "../config.hpp"
+#include "../savefile.hpp"
 #include "log.hpp"
 #include <algorithm>
 #include <iostream>
@@ -219,7 +219,7 @@ void CoopPacket::sendTo(sockaddr_in dest, uint64_t destPeerId) {
 
 void CoopPacket::sendTo(int globalIdx) {
     if (globalIdx >= 0 && globalIdx < MAX_PLAYERS) {
-        sendTo(gNetworkPlayerSockets[globalIdx], gNetworkPlayerPeerIds[globalIdx]); 
+        sendTo(gNetworkPlayerAddrs[globalIdx], gNetworkPlayerPeerIds[globalIdx]); 
     }
 }
 
@@ -234,11 +234,11 @@ void CoopPacket::sendToAll() {
     for (int i = 1; i < MAX_PLAYERS; i++) {
         if (!gNetworkPlayers[i].connected) continue;
 
-        if (gNetworkSystem->isSameEndpoint(addr, peerId, gNetworkPlayerSockets[i], gNetworkPlayerPeerIds[i])) {
+        if (gNetworkSystem->isSameEndpoint(addr, peerId, gNetworkPlayerAddrs[i], gNetworkPlayerPeerIds[i])) {
             continue;
         }
 
-        const sockaddr_in &dest = gNetworkPlayerSockets[i];
+        const sockaddr_in &dest = gNetworkPlayerAddrs[i];
         uint64_t destPeerId = gNetworkPlayerPeerIds[i];
 
         if (gNetworkSystem) {
@@ -521,7 +521,7 @@ void CoopPacket::execute() {
             }
 
             NetworkPlayer *np = &gNetworkPlayers[globalIndex];
-            gNetworkPlayerSockets[globalIndex] = addr;
+            gNetworkPlayerAddrs[globalIndex] = addr;
             gNetworkPlayerPeerIds[globalIndex] = peerId;
 
             auto outPkt = CoopPacket::createOutgoing(sock, addr, peerId, PACKET_JOIN, true, PLMT_NONE);
@@ -592,7 +592,7 @@ void CoopPacket::execute() {
             outPkt.write<uint8_t>(connectedCount);
             for (const auto &player : gNetworkPlayers) {
                 if (!player.connected || !isValidGlobalIndex(player.globalIndex)) continue;
-                if (gNetworkSystem->isSameEndpoint(addr, peerId, gNetworkPlayerSockets[player.globalIndex], gNetworkPlayerPeerIds[player.globalIndex])) {
+                if (gNetworkSystem->isSameEndpoint(addr, peerId, gNetworkPlayerAddrs[player.globalIndex], gNetworkPlayerPeerIds[player.globalIndex])) {
                     continue;
                 }
 
@@ -756,7 +756,7 @@ void CoopPacket::execute() {
             memset(gNetworkPlayers[globalIndex].palette.colors, 0x0, 24);
             gNetworkPlayers[globalIndex].name = "";
             gNetworkPlayers[globalIndex].discordId = "";
-            memset(&gNetworkPlayerSockets[globalIndex], 0x0, sizeof(sockaddr_in));
+            memset(&gNetworkPlayerAddrs[globalIndex], 0x0, sizeof(sockaddr_in));
             gNetworkPlayerPeerIds[globalIndex] = 0;
             break;
         }

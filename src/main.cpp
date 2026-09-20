@@ -1,10 +1,10 @@
 #include <cstring>
 #include <csignal>
 #include "config.hpp"
-#include "network.hpp"
-#include "lobby.hpp"
+#include "network/network.hpp"
+#include "network/lobby.hpp"
+#include "network/server.hpp"
 #include "savefile.hpp"
-#include "server.hpp"
 
 static void handleSignal(int sig) {
     gServerRunning.store(false);

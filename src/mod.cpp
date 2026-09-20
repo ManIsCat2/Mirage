@@ -3,7 +3,7 @@
 #include <algorithm>
 #include "mod.hpp"
 #include "config.hpp"
-#include "smlua.hpp"
+#include "lua/smlua.hpp"
 
 namespace fs = std::filesystem;
 
@@ -90,7 +90,7 @@ bool CoopMod::load(const std::string &modPath) {
     } else {
         CoopModFile modFile;
         modFile.realPath = mainPath;
-        modFile.relativePath = fs::path(mainPath).filename().string();
+        modFile.relativePath = name = fs::path(mainPath).filename().string();
         modFile.size = fs::file_size(mainPath);
         files.push_back(modFile);
         size = modFile.size;

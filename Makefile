@@ -1,4 +1,4 @@
-DIRECTORIES := src
+DIRECTORIES := src src/lua src/network
 TARGET := Mirage
 BUILD_DIR := build
 CXX := clang++

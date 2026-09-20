@@ -1,20 +1,20 @@
 #include "network.hpp"
 #include "packet.hpp"
 #include "log.hpp"
-#include "config.hpp"
+#include "../config.hpp"
 #include <chrono>
 #include <algorithm>
 #include <cstring>
 #include <thread>
 
 std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
-std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerSockets{};
+std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs{};
 std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
 
 NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a) {
     for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayers[i].connected && sockaddrInEqual(a, gNetworkPlayerSockets[i])) {
+        if (gNetworkPlayers[i].connected && sockaddrInEqual(a, gNetworkPlayerAddrs[i])) {
             return &gNetworkPlayers[i];
         }
     }
@@ -59,14 +59,14 @@ NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum, int16
 
 void NetworkSystem::sendToPlayer(int globalIndex, const uint8_t *data, size_t len) {
     if (globalIndex >= 0 && globalIndex < MAX_PLAYERS) {
-        sendTo(gNetworkPlayerSockets[globalIndex], gNetworkPlayerPeerIds[globalIndex], data, len);
+        sendTo(gNetworkPlayerAddrs[globalIndex], gNetworkPlayerPeerIds[globalIndex], data, len);
     }
 }
 
 void NetworkSystem::sendToAll(const uint8_t *data, size_t len, int ignoreIndex) {
     for (int i = 1; i < MAX_PLAYERS; i++) {
         if (!gNetworkPlayers[i].connected || i == ignoreIndex) continue;
-        sendTo(gNetworkPlayerSockets[i], gNetworkPlayerPeerIds[i], data, len);
+        sendTo(gNetworkPlayerAddrs[i], gNetworkPlayerPeerIds[i], data, len);
     }
 }
 
@@ -194,7 +194,7 @@ void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
         np->globalIndex = 0;
         np->name = "";
         gNetworkPlayerPeerIds[idx] = 0;
-        std::memset(&gNetworkPlayerSockets[idx], 0, sizeof(sockaddr_in));
+        std::memset(&gNetworkPlayerAddrs[idx], 0, sizeof(sockaddr_in));
     }
 }
 

@@ -2,7 +2,7 @@
 
 #include <string>
 #include <lua.hpp>
-#include "mod.hpp"
+#include "../mod.hpp"
 
 class SMLua {
 public:
