@@ -1,4 +1,5 @@
 #include "smlua.hpp"
+#include "../config.hpp"
 #include "constants.hpp"
 #include "log.hpp"
 #include <iostream>
@@ -30,22 +31,97 @@ bool SMLua::init() {
     luaL_requiref(L, "coroutine", luaopen_coroutine, 1);
     luaL_requiref(L, "utf8", luaopen_utf8, 1);
 
-    int result = luaL_dostring(L, gSMLuaConstants);
+    lua_register(L, "hook_event", [](lua_State* L) {
+        int hookType = luaL_checkinteger(L, 1);
+        if (!lua_isfunction(L, 2)) {
+            return luaL_error(L, "hook_event expects a function as the second argument");
+        }
+
+        lua_pushvalue(L, 2);
+        int funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
+
+        gSMLua.registerHook(hookType, funcRef);
+        return 0;
+    });
+
+    lua_register(L, "network_is_server", [](lua_State* L) {
+        lua_pushboolean(L, true);
+        return 1;
+    });
+
+    // until i add proper c objects/userdata and stuff
+    const char *luaTableStubs = R"(
+        local function createFakeStruct()
+            local mt = {}
+            mt.__index = function(t, k)
+                local fake = setmetatable({}, mt)
+                rawset(t, k, fake)
+                return fake
+            end
+            mt.__add = function() return 0 end
+            mt.__sub = function() return 0 end
+            mt.__mul = function() return 0 end
+            mt.__div = function() return 0 end
+            mt.__eq  = function() return false end
+            mt.__lt  = function() return false end
+            mt.__le  = function() return false end
+            
+            mt.__band = function() return 0 end
+            mt.__bor  = function() return 0 end
+            mt.__bxor = function() return 0 end
+            mt.__shl  = function() return 0 end
+            mt.__shr  = function() return 0 end
+            mt.__bnot = function() return 0 end
+            
+            return setmetatable({}, mt)
+        end
+
+        _G.gMarioStates = {}
+        _G.gPlayerSyncTable = {}
+        _G.gNetworkPlayers = {}
+        for i = 0, 15 do
+            _G.gMarioStates[i] = createFakeStruct()
+            _G.gPlayerSyncTable[i] = createFakeStruct()
+            _G.gNetworkPlayers[i] = createFakeStruct()
+        end
+        
+        _G.gServerSettings = createFakeStruct()
+        _G.gLevelValues = createFakeStruct()
+        _G.gGlobalSyncTable = createFakeStruct()
+        _G.gGlobalTimer = 0
+    )";
+
+    int result = luaL_dostring(L, luaTableStubs);
     if (result != LUA_OK) {
-        Logging::log("SMLUA", "Lua error: {}", lua_tostring(L, -1));
+        Logging::log("SMLUA", "Lua error (stubs): {}", lua_tostring(L, -1));
         lua_pop(L, 1);
+        shutdown();
         return false;
     }
-    lua_settop(L, 0);
 
+    result = luaL_dostring(L, gSMLuaConstants);
+    if (result != LUA_OK) {
+        Logging::log("SMLUA", "Lua error (constants): {}", lua_tostring(L, -1));
+        lua_pop(L, 1);
+        shutdown();
+        return false;
+    }
+
+    lua_settop(L, 0);
     return true;
 }
 
 void SMLua::shutdown() {
     if (L) {
+        registeredHooks.clear();
         lua_close(L);
         L = nullptr;
     }
+}
+
+void SMLua::registerHook(int hookType, int funcRef) {
+    registeredHooks[hookType].push_back({funcRef});
+    //Logging::log("SMLUA", "Hooked func {} to hook {}", funcRef, hookType);
 }
 
 int SMLua::createModEnv() {
@@ -91,4 +167,59 @@ bool SMLua::executeMod(const CoopMod &mod) {
 
     lua_remove(L, envIdx);
     return success;
+}
+
+
+void SMLua::executeHooks(int hookType) {
+    auto it = registeredHooks.find(hookType);
+    if (it == registeredHooks.end()) return;
+
+    for (const auto& hook : it->second) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, hook.luaFuncRef);
+        if (!lua_isfunction(L, -1)) {
+            lua_pop(L, 1);
+            continue;
+        }
+
+        if (lua_pcall(L, 0, 0, 0) != LUA_OK) {
+            Logging::log("SMLUA", "Error executing hook {} callback: {}", hookType, lua_tostring(L, -1));
+            lua_pop(L, 1);
+        }
+    }
+}
+template <typename F>
+void SMLua::executeHooks(int hookType, F &&pushArgs) {
+    auto it = registeredHooks.find(hookType);
+    if (it == registeredHooks.end()) return;
+
+    for (const auto &hook : it->second) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, hook.luaFuncRef);
+        if (!lua_isfunction(L, -1)) {
+            lua_pop(L, 1);
+            continue;
+        }
+
+        int nargs = pushArgs(L);
+
+        if (lua_pcall(L, nargs, 0, 0) != LUA_OK) {
+            Logging::log("SMLUA", "Error executing hook {} callback: {}", hookType, lua_tostring(L, -1));
+            lua_pop(L, 1);
+        }
+    }
+}
+
+void SMLua::update() {
+    if (!L || !gServerConfig.executeMods) return;
+
+    executeHooks(HOOK_UPDATE);
+
+    for (int i = 0; i < 16; i++) {
+        executeHooks(HOOK_MARIO_UPDATE, [&](lua_State *L) {
+            lua_getglobal(L, "gMarioStates");
+            lua_pushinteger(L, i);
+            lua_gettable(L, -2);
+            lua_remove(L, -2);
+            return 1;
+        });
+    }
 }
