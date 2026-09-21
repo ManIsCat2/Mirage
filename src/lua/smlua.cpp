@@ -77,19 +77,38 @@ bool SMLua::init() {
             return setmetatable({}, mt)
         end
 
-        _G.gMarioStates = {}
+        _G.createFakeStruct = createFakeStruct
+
+        local function createSyncTable(name, parent)
+            local st = {
+                _name = name,
+                _parent = parent,
+                _table = {},
+                _seq = {},
+                _hook_on_changed = {}
+            }
+            return setmetatable(st, _SyncTable)
+        end
+
+        _G.gGlobalSyncTable = createSyncTable("gGlobalSyncTable", nil)
         _G.gPlayerSyncTable = {}
+        _G.gMarioStates = {}
         _G.gNetworkPlayers = {}
+
         for i = 0, 15 do
-            _G.gMarioStates[i] = createFakeStruct()
-            _G.gPlayerSyncTable[i] = createFakeStruct()
-            _G.gNetworkPlayers[i] = createFakeStruct()
+            local mario = createFakeStruct()
+            mario.playerIndex = i
+            _G.gMarioStates[i] = mario
+
+            local np = createFakeStruct()
+            np.globalIndex = i
+            _G.gNetworkPlayers[i] = np
+
+            _G.gPlayerSyncTable[i] = createSyncTable("gPlayerSyncTable", nil)
         end
         
         _G.gServerSettings = createFakeStruct()
         _G.gLevelValues = createFakeStruct()
-        _G.gGlobalSyncTable = createFakeStruct()
-        _G.gGlobalTimer = 0
     )";
 
     int result = luaL_dostring(L, luaTableStubs);
