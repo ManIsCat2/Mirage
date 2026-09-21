@@ -94,6 +94,7 @@ public:
     bool executeMod(const CoopMod &mod);
     void update();
     void registerHook(int hookType, int funcRef);
+    void registerFunc(lua_State *L, const char *name, int (*func)(lua_State *L));
 
     lua_State *getState() const { return L; }
 private:

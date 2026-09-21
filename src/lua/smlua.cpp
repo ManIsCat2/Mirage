@@ -1,6 +1,7 @@
 #include "smlua.hpp"
 #include "../config.hpp"
 #include "constants.hpp"
+#include "functions.hpp"
 #include "log.hpp"
 #include <iostream>
 #include <filesystem>
@@ -107,6 +108,8 @@ bool SMLua::init() {
         return false;
     }
 
+    smluaBindAutogenFuncs();
+
     lua_settop(L, 0);
     return true;
 }
@@ -122,6 +125,11 @@ void SMLua::shutdown() {
 void SMLua::registerHook(int hookType, int funcRef) {
     registeredHooks[hookType].push_back({funcRef});
     //Logging::log("SMLUA", "Hooked func {} to hook {}", funcRef, hookType);
+}
+
+void SMLua::registerFunc(lua_State *L, const char *name, int (*func)(lua_State *L)) {
+    lua_pushcfunction(L, func);
+    lua_setglobal(L, name);
 }
 
 int SMLua::createModEnv() {
