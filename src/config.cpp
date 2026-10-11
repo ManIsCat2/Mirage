@@ -1,11 +1,23 @@
 #include "config.hpp"
 #include "json.hpp"
 #include "log.hpp"
+#include <fstream>
 #include <iostream>
 
 using json = nlohmann::json;
 
 ServerConfig gServerConfig{};
+
+template <typename T>
+static std::vector<T> readJsonArray(const json &data, const std::string &key) {
+    std::vector<T> result;
+    if (data.contains(key) && data[key].is_array()) {
+        for (const auto &item : data[key]) {
+            result.push_back(item.get<T>());
+        }
+    }
+    return result;
+}
 
 void ServerConfig::read(const std::string &filename) {
     std::ifstream file(filename);
@@ -38,6 +50,8 @@ void ServerConfig::read(const std::string &filename) {
     nametags = data.value("nametags", nametags);
     maxPlayers = data.value("maxPlayers", maxPlayers);
     pauseAnywhere = data.value("pauseAnywhere", pauseAnywhere);
+    whitelist = readJsonArray<int64_t>(data, "whitelist");
+    blacklist = readJsonArray<int64_t>(data, "blacklist");
 
     mods.clear();
     if (data.contains("mods") && data["mods"].is_array()) {
@@ -82,7 +96,9 @@ void ServerConfig::write(const std::string &filename) {
         {"nametags", nametags},
         {"maxPlayers", maxPlayers},
         {"pauseAnywhere", pauseAnywhere},
-        {"mods", modPaths}
+        {"mods", modPaths},
+        {"whitelist", whitelist},
+        {"blacklist", blacklist}
     };
 
     std::ofstream file(filename);

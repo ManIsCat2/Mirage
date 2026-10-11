@@ -32,6 +32,8 @@ public:
     int maxPlayers = MAX_PLAYERS;
     int pauseAnywhere = 1;
     std::vector<CoopMod> mods;
+    std::vector<int64_t> whitelist;
+    std::vector<int64_t> blacklist;
     // int pvpType = 0;
 
     void read(const std::string &filename);

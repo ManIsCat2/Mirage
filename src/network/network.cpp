@@ -10,6 +10,7 @@
 std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
 std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs{};
 std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds{};
+std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
 
 NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a) {
@@ -158,7 +159,8 @@ void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint6
 }
 
 void CoopNetNetworkSystem::onLobbyJoined(uint64_t lobbyId, uint64_t userId, uint64_t ownerId, uint64_t destId) {
-    Logging::log("NETWORK", "Joined/Created lobby ID: {} (Owner: {})", lobbyId, ownerId);
+    Logging::log("NETWORK", "Joined/Created lobby ID: {} (dest: {}) (Owner: {})", lobbyId, destId, ownerId);
+    gNetworkPlayerCoopNetIds[userId] = destId;
     auto *coopnet = static_cast<CoopNetNetworkSystem*>(gNetworkSystem.get());
     if (coopnet) {
         coopnet->setLocalLobbyId(lobbyId);

@@ -196,6 +196,19 @@ std::vector<uint8_t> CoopPacket::compressAndHash() {
 }
 
 void CoopPacket::sendTo(sockaddr_in dest, uint64_t destPeerId) {
+    if (gServerConfig.networkSystem == 1) {
+        if (gServerConfig.whitelist.size() > 0) {
+            if (std::find(gServerConfig.whitelist.begin(), gServerConfig.whitelist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.whitelist.end()) {
+            } else {
+                Logging::log("SERVER", "Ignoring send for blacklisted client with peerId {}", peerId);
+                return;
+            }
+        }
+        if (std::find(gServerConfig.blacklist.begin(), gServerConfig.blacklist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.blacklist.end()) {
+            Logging::log("SERVER", "Ignoring send for blacklisted client with peerId {}", peerId);
+            return;
+        }
+    }
     auto compressed = compressAndHash();
     if (compressed.empty()) return;
 
@@ -376,7 +389,7 @@ void CoopPacket::execute() {
         }
         case PACKET_MOD_LIST_REQUEST: {
             std::string version = read<std::string>(128);
-            Logging::log("SERVER", "Received mod list request:\n  Version: {}", version);
+            Logging::log("SERVER", "Received mod list request with version: {}", version);
 
             packetOrderedBegin();
 
@@ -502,7 +515,7 @@ void CoopPacket::execute() {
             }
             std::string name = read<std::string>(64);
 
-            Logging::log("SERVER", "Received join request:\n  Version: {}\n  Name: {}", version, name);
+            Logging::log("SERVER", "Received join request: {} and from {} ({})", version, name, peerId);
 
             uint8_t globalIndex = 0;
             uint8_t connectedCount = 0;
@@ -757,6 +770,7 @@ void CoopPacket::execute() {
             gNetworkPlayers[globalIndex].name = "";
             gNetworkPlayers[globalIndex].discordId = "";
             memset(&gNetworkPlayerAddrs[globalIndex], 0x0, sizeof(sockaddr_in));
+            gNetworkPlayerCoopNetIds[gNetworkPlayerPeerIds[globalIndex]] = 0;
             gNetworkPlayerPeerIds[globalIndex] = 0;
             break;
         }

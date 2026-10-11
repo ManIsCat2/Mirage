@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <map>
 #include <array>
 #include <memory>
 #include "socket.hpp"
@@ -47,6 +48,7 @@ enum NetworkPlayerType {
 extern std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers;
 extern std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs;
 extern std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds;
+extern std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds;
 
 class NetworkSystem {
 public:
