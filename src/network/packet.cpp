@@ -2,6 +2,7 @@
 #include "network.hpp"
 #include "../config.hpp"
 #include "../savefile.hpp"
+#include "../gui.hpp"
 #include "log.hpp"
 #include <algorithm>
 #include <iostream>
@@ -355,7 +356,7 @@ void CoopPacket::execute() {
                 palette.colors[i] = read<uint8_t>();
             }
 
-            gNetworkPlayers[globalIndex].name = name;
+            gNetworkPlayers[globalIndex].name = std::string(name.c_str());
             gNetworkPlayers[globalIndex].modelIndex = model;
             std::memcpy(gNetworkPlayers[globalIndex].palette.colors, palette.colors, 24);
             break;
@@ -562,7 +563,7 @@ void CoopPacket::execute() {
 
             np->connected = true;
             np->globalIndex = globalIndex;
-            np->name = name;
+            np->name = std::string(name.c_str());
             np->modelIndex = model;
             std::memcpy(np->palette.colors, palette.colors, 24);
             np->networkId = peerId;
@@ -743,6 +744,7 @@ void CoopPacket::execute() {
             }
             std::string msg = read<std::string>(msgLen);
             Logging::log("SERVER", "Received message from {}\\#ffffff\\: {}", gNetworkPlayers[globalIndex].name, msg);
+            gGui.chatLog.push_back(gNetworkPlayers[globalIndex].name + ": " + msg);
             break;
         }
         case PACKET_LEAVING: {

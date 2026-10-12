@@ -7,3 +7,4 @@ sm64_save.bin
 mods/*
 .DS_Store
 *.DS_Store
+imgui.ini

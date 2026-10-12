@@ -1,10 +1,10 @@
-DIRECTORIES := src src/lua src/network
+DIRECTORIES := src src/network src/imgui
 TARGET := Mirage
 BUILD_DIR := build
 CXX := clang++
 ASAN := 0
-CXXFLAGS := -O3 -Iinclude -std=c++23 -MMD -MP
-LDFLAGS := -lz -llua
+CXXFLAGS := -O3 -Iinclude -Isrc/imgui -std=c++23 -MMD -MP
+LDFLAGS := -lz
 
 WINDOWS_BUILD := 0
 LINUX_BUILD := 0
@@ -34,19 +34,19 @@ COOPNET_LIB :=
 # setup linker flags
 ifeq ($(WINDOWS_BUILD),1)
 	CXX := g++ # use g++ for the c++ compiler by default
-	LDFLAGS += -Llib/win64 -lcoopnet -ljuice -lws2_32 -liphlpapi -lbcrypt -static
+	LDFLAGS += -Llib/win64 -lcoopnet -ljuice -lglfw3 -lopengl32 -lgdi32 -lws2_32 -liphlpapi -lbcrypt -static
 else ifeq ($(OSX_BUILD),1)
 	ifeq ($(ARM_BUILD),1)
-		LDFLAGS += -Llib/mac_arm -lcoopnet -Wl,-rpath,@executable_path
+		LDFLAGS += -Llib/mac_arm -lcoopnet -lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
 		COOPNET_LIB += ./lib/mac_arm/libcoopnet.dylib
 		COOPNET_LIB += ./lib/mac_arm/libjuice.1.6.2.dylib
 	else
-		LDFLAGS += -Llib/mac_intel -lcoopnet -Wl,-rpath,@executable_path
+		LDFLAGS += -Llib/mac_intel -lcoopnet -lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
 		COOPNET_LIB += ./lib/mac_intel/libcoopnet.dylib
 		COOPNET_LIB += ./lib/mac_intel/libjuice.1.6.2.dylib
 	endif
 else
-	LDFLAGS += -Llib/linux -lcoopnet -ljuice
+	LDFLAGS += -Llib/linux -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
 endif
 
 SOURCES := $(wildcard $(addsuffix /*.cpp,$(DIRECTORIES)))

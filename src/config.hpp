@@ -19,7 +19,6 @@ public:
     std::string mode = "";
     std::string description = "";
     std::string password = "";
-    bool executeMods = false;
     int savefileIndex = 1;
     int playerInteractions = 1;
     int bouncyBounds = 0;
@@ -34,6 +33,7 @@ public:
     std::vector<CoopMod> mods;
     std::vector<int64_t> whitelist;
     std::vector<int64_t> blacklist;
+    bool gui = false;
     // int pvpType = 0;
 
     void read(const std::string &filename);

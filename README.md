@@ -9,22 +9,22 @@
 ## 1. Install dependencies
 ### Ubuntu / Debian
 ```bash
-sudo apt install build-essential clang libz-dev liblua5.3-dev
+sudo apt install build-essential clang libz-dev libglfw3 libglfw3-dev
 ```
 
 ### Arch Linux
 ```bash
-sudo pacman -S base-devel clang zlib lua
+sudo pacman -S base-devel clang zlib glfw
 ```
 
 ### Fedora
 ```bash
-sudo dnf install make clang zlib-devel lua-devel
+sudo dnf install make clang zlib-devel glfw glfw-devel
 ```
 
 ### Windows (MinGW)
 ```bash
-pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-zlib mingw-w64-x86_64-lua
+pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-zlib mingw-w64-x86_64-glfw
 ```
 
 ## 2. Clone the Repository

@@ -3,7 +3,6 @@
 #include <algorithm>
 #include "mod.hpp"
 #include "config.hpp"
-#include "lua/smlua.hpp"
 
 namespace fs = std::filesystem;
 
@@ -101,10 +100,6 @@ bool CoopMod::load(const std::string &modPath) {
     std::sort(files.begin(), files.end(), [](const CoopModFile &a, const CoopModFile &b) {
         return a.relativePath < b.relativePath;
     });
-
-    if (gServerConfig.executeMods) {
-        gSMLua.executeMod(*this);
-    }
 
     return true;
 }

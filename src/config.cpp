@@ -38,7 +38,6 @@ void ServerConfig::read(const std::string &filename) {
     mode = data.value("mode", mode);
     description = data.value("description", description);
     password = data.value("password", password);
-    executeMods = data.value("executeMods", executeMods);
     savefileIndex = data.value("savefileIndex", savefileIndex);
     playerInteractions = data.value("playerInteractions", playerInteractions);
     bouncyBounds = data.value("bouncyBounds", bouncyBounds);
@@ -52,6 +51,7 @@ void ServerConfig::read(const std::string &filename) {
     pauseAnywhere = data.value("pauseAnywhere", pauseAnywhere);
     whitelist = readJsonArray<int64_t>(data, "whitelist");
     blacklist = readJsonArray<int64_t>(data, "blacklist");
+    gui = data.value("gui", gui);
 
     mods.clear();
     if (data.contains("mods") && data["mods"].is_array()) {
@@ -84,7 +84,6 @@ void ServerConfig::write(const std::string &filename) {
         {"mode", mode},
         {"description", description},
         {"password", password},
-        {"executeMods", executeMods},
         {"savefileIndex", savefileIndex},
         {"playerInteractions", playerInteractions},
         {"bouncyBounds", bouncyBounds},
@@ -98,7 +97,8 @@ void ServerConfig::write(const std::string &filename) {
         {"pauseAnywhere", pauseAnywhere},
         {"mods", modPaths},
         {"whitelist", whitelist},
-        {"blacklist", blacklist}
+        {"blacklist", blacklist},
+        {"gui", gui}
     };
 
     std::ofstream file(filename);
