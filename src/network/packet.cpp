@@ -749,31 +749,14 @@ void CoopPacket::execute() {
         }
         case PACKET_LEAVING: {
             uint8_t globalIndex = read<uint8_t>();
-            if (!isValidGlobalIndex(globalIndex)) break;
+            if (globalIndex == 0 || !isValidGlobalIndex(globalIndex) || !senderNp || senderGlobalIndex != globalIndex || !gNetworkPlayers[globalIndex].connected) break;
 
             auto outPkt = CoopPacket::createOutgoing(sock, addr, peerId, PACKET_LEAVING, true, PLMT_NONE);
             outPkt.write<uint8_t>(globalIndex);
             outPkt.sendToAll();
 
             Logging::log("SERVER", "Player {} disconnected", gNetworkPlayers[globalIndex].name);
-            gNetworkPlayers[globalIndex].connected = false;
-            gNetworkPlayers[globalIndex].type = 0;
-            gNetworkPlayers[globalIndex].globalIndex = 0;
-            gNetworkPlayers[globalIndex].currLevelAreaSeqId = 0;
-            gNetworkPlayers[globalIndex].currCourseNum = 0;
-            gNetworkPlayers[globalIndex].currActNum = 0;
-            gNetworkPlayers[globalIndex].currLevelNum = 0;
-            gNetworkPlayers[globalIndex].currAreaIndex = 0;
-            gNetworkPlayers[globalIndex].currLevelSyncValid = 0;
-            gNetworkPlayers[globalIndex].currAreaSyncValid = 0;
-            gNetworkPlayers[globalIndex].networkId = 0;
-            gNetworkPlayers[globalIndex].modelIndex = 0;
-            memset(gNetworkPlayers[globalIndex].palette.colors, 0x0, 24);
-            gNetworkPlayers[globalIndex].name = "";
-            gNetworkPlayers[globalIndex].discordId = "";
-            memset(&gNetworkPlayerAddrs[globalIndex], 0x0, sizeof(sockaddr_in));
-            gNetworkPlayerCoopNetIds[gNetworkPlayerPeerIds[globalIndex]] = 0;
-            gNetworkPlayerPeerIds[globalIndex] = 0;
+            clearNetworkPlayer(globalIndex);
             break;
         }
         default: {

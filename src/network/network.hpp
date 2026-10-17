@@ -49,6 +49,8 @@ extern std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers;
 extern std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs;
 extern std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds;
 extern std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds;
+extern void clearNetworkPlayer(int globalIndex);
+extern void clearNetworkPlayers();
 
 class NetworkSystem {
 public:

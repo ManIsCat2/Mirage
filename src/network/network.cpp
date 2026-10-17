@@ -13,6 +13,19 @@ std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds{};
 std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
 
+void clearNetworkPlayer(int globalIndex) {
+    uint64_t peerId = gNetworkPlayerPeerIds[globalIndex];
+    if (peerId != 0) gNetworkPlayerCoopNetIds.erase(peerId);
+    gNetworkPlayers[globalIndex] = NetworkPlayer{};
+    gNetworkPlayerPeerIds[globalIndex] = 0;
+    gNetworkPlayerAddrs[globalIndex] = sockaddr_in{};
+}
+
+void clearNetworkPlayers() {
+    for (int i = 1; i < MAX_PLAYERS; i++) clearNetworkPlayer(i);
+    gNetworkPlayerCoopNetIds.clear();
+}
+
 NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a) {
     for (int i = 0; i < MAX_PLAYERS; i++) {
         if (gNetworkPlayers[i].connected && sockaddrInEqual(a, gNetworkPlayerAddrs[i])) {
@@ -149,6 +162,7 @@ void CoopNetNetworkSystem::onConnected(uint64_t userId) {
 
 void CoopNetNetworkSystem::onDisconnected(bool intentional) {
     Logging::log("NETWORK", "Disconnected from CoopNet. Intentional: {}", intentional);
+    clearNetworkPlayers();
 }
 
 void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint64_t dataLength) {
@@ -189,14 +203,12 @@ void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
     Logging::log("NETWORK", "Peer disconnected: {}", peerId);
     NetworkPlayer *np = getNetworkPlayerFromPeerId(peerId);
     if (np) {
-        int idx = np->globalIndex;
+        uint8_t idx = np->globalIndex;
         Logging::log("NETWORK", "Player {} disconnected via CoopNet peer drop", np->name);
-        np->connected = false;
-        np->type = 0;
-        np->globalIndex = 0;
-        np->name = "";
-        gNetworkPlayerPeerIds[idx] = 0;
-        std::memset(&gNetworkPlayerAddrs[idx], 0, sizeof(sockaddr_in));
+        auto leaving = CoopPacket::createOutgoing(0, {}, 0, PACKET_LEAVING, true, PLMT_NONE);
+        leaving.write<uint8_t>(idx);
+        leaving.sendToAll();
+        clearNetworkPlayer(idx);
     }
 }
 
@@ -278,4 +290,5 @@ void networkShutdown() {
         gNetworkSystem->shutdown();
         gNetworkSystem.reset();
     }
+    clearNetworkPlayers();
 }
