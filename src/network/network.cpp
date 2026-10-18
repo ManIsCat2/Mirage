@@ -212,7 +212,7 @@ void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
     }
 }
 
-void CoopNetNetworkSystem::onLoadBalance(const char* host, uint32_t port) {
+void CoopNetNetworkSystem::onLoadBalance(const char *host, uint32_t port) {
     Logging::log("NETWORK", "Load balance directed to host: {} port: {}", host, port);
 }
 

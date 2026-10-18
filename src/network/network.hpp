@@ -97,7 +97,7 @@ private:
     static void onError(enum MPacketErrorNumber error, uint64_t tag);
     static void onPeerConnect(uint64_t peerId);
     static void onPeerDisconnect(uint64_t peerId);
-    static void onLoadBalance(const char* host, uint32_t port);
+    static void onLoadBalance(const char *host, uint32_t port);
 public:
     bool init(int port) override;
     void shutdown() override;
