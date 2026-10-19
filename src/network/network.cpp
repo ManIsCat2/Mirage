@@ -174,7 +174,7 @@ void CoopNetNetworkSystem::onConnected(uint64_t userId) {
 }
 
 void CoopNetNetworkSystem::onDisconnected(bool intentional) {
-    Logging::log("NETWORK", "Disconnected from CoopNet. Intentional: {}", intentional);
+    Logging::log("NETWORK", "Disconnected from CoopNet, Intentional: {}", intentional);
     clearCoopNetPlayers();
 }
 
