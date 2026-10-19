@@ -56,12 +56,12 @@ CoopPacket::CoopPacket(socket_t s, sockaddr_in a, uint64_t pId, const uint8_t *c
     }
 
     dest.resize(destLen);
-    rawData = std::move(dest);
+    data = std::move(dest);
 
-    if (rawData.size() < 3) return;
+    if (data.size() < 3) return;
 
-    pktType = rawData[0];
-    seqId = rawData[1] | (rawData[2] << 8);
+    pktType = data[0];
+    seqId = data[1] | (data[2] << 8);
     offset = 3;
     flags = read<uint8_t>();
     
@@ -91,7 +91,7 @@ CoopPacket::CoopPacket(socket_t s, sockaddr_in a, uint64_t pId, const uint8_t *c
 }
 
 CoopPacket::CoopPacket(socket_t s, sockaddr_in a, uint64_t pId, uint8_t pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex) : sock(s), addr(a), peerId(pId), pktType(pType), isReliable(reliable) {
-    outBuffer.reserve(256);
+    data.reserve(256);
 
     uint8_t initFlags = 0;
     if (levelMatchType == PLMT_AREA) initFlags |= (1 << 0);
@@ -140,7 +140,7 @@ CoopPacket CoopPacket::createOutgoing(socket_t s, sockaddr_in a, uint64_t pId, u
 
 CoopPacket CoopPacket::duplicate() {
     CoopPacket p = *this;
-    p.outBuffer = rawData;
+    p.data = data;
 
     if (seqId != 0) {
         p.isReliable = true;
@@ -151,12 +151,12 @@ CoopPacket CoopPacket::duplicate() {
         p.seqId = 0;
     }
 
-    if (p.outBuffer.size() >= 3) {
-        p.outBuffer[1] = p.seqId & 0xFF;
-        p.outBuffer[2] = (p.seqId >> 8) & 0xFF;
+    if (p.data.size() >= 3) {
+        p.data[1] = p.seqId & 0xFF;
+        p.data[2] = (p.seqId >> 8) & 0xFF;
     }
 
-    p.offset = p.outBuffer.size();
+    p.offset = p.data.size();
     return p;
 }
 
@@ -165,31 +165,29 @@ void CoopPacket::setOrderedData() {
     
     orderedSeqId = sCurrentOrderedSeqId++;
     
-    if (outBuffer.size() >= 10) {
-        outBuffer[8] = orderedSeqId & 0xFF;
-        outBuffer[9] = (orderedSeqId >> 8) & 0xFF;
+    if (data.size() >= 10) {
+        data[8] = orderedSeqId & 0xFF;
+        data[9] = (orderedSeqId >> 8) & 0xFF;
     }
 }
 
 std::vector<uint8_t> CoopPacket::compressAndHash() {
-    if (outBuffer.empty()) return {};
+    if (data.empty()) return {};
 
     if (this->isOrdered) {
         setOrderedData();
     }
 
     uint32_t hashVal = 0;
-    int bytePos = 0;
-    for (uint8_t b : outBuffer) {
-        hashVal ^= ((uint32_t)(b) << (8 * bytePos));
-        bytePos = (bytePos + 1) % 4;
+    for (size_t i = 0; i < data.size(); ++i) {
+        hashVal ^= static_cast<uint32_t>(data[i]) << (8 * (i % 4));
     }
     write<uint32_t>(hashVal);
 
-    std::vector<uint8_t> compressed(compressBound(outBuffer.size()));
+    std::vector<uint8_t> compressed(compressBound(data.size()));
     uLongf destLen = compressed.size();
     
-    if (compress2(compressed.data(), &destLen, outBuffer.data(), outBuffer.size(), Z_BEST_COMPRESSION) == Z_OK) {
+    if (compress2(compressed.data(), &destLen, data.data(), data.size(), Z_BEST_COMPRESSION) == Z_OK) {
         compressed.resize(destLen);
         return compressed;
     }
@@ -228,7 +226,7 @@ void CoopPacket::sendTo(sockaddr_in dest, uint64_t destPeerId) {
             1
         });
     }
-    outBuffer.clear();
+    data.clear();
 }
 
 void CoopPacket::sendTo(int globalIdx) {
@@ -272,11 +270,11 @@ void CoopPacket::sendToAll() {
         }
     }
     
-    outBuffer.clear();
+    data.clear();
 }
 
 void CoopPacket::handle() {
-    if (rawData.empty()) return;
+    if (data.empty()) return;
 
     if (seqId != 0 && pktType != PACKET_ACK) {
         auto ackPkt = CoopPacket::createOutgoing(sock, addr, peerId, PACKET_ACK, false, PLMT_NONE);
@@ -298,6 +296,22 @@ void CoopPacket::handle() {
 
     if (requestBroadcast && gNetworkSystem->requireServerBroadcast()) {
         CoopPacket p = duplicate();
+        if (p.pktType == PACKET_CHAT && peerId == 0 && gServerConfig.networkSystem == SYS_BOTH && p.data.size() >= 8) {
+            uint8_t senderIdx = p.data[5];
+            uint16_t msgLen = p.data[6] | (p.data[7] << 8);
+            size_t end = std::min<size_t>(8 + msgLen, p.data.size());
+            std::string oldMsg(p.data.begin() + 8, p.data.begin() + end);
+
+            std::string senderName = isValidGlobalIndex(senderIdx) ? gNetworkPlayers[senderIdx].name : "Unknown";
+            std::string newMsg = "[from " + senderName + "\\#dcdcdc\\] " + oldMsg;
+            if (newMsg.size() > MAX_CHAT_MSG_LENGTH - 1) newMsg.resize(MAX_CHAT_MSG_LENGTH - 1);
+
+            p.data.resize(8);
+            p.data[5] = 0;
+            p.data[6] = newMsg.size() & 0xFF;
+            p.data[7] = (newMsg.size() >> 8) & 0xFF;
+            p.data.insert(p.data.end(), newMsg.begin(), newMsg.end());
+        }
         p.sendToAll();
     }
 }
@@ -549,7 +563,7 @@ void CoopPacket::execute() {
             outPkt.write<uint8_t>(gServerConfig.starStaying);
             outPkt.write<uint8_t>(gServerConfig.skipIntro);
             outPkt.write<uint8_t>(gServerConfig.bubbleDeath);
-            outPkt.write<uint8_t>(gServerConfig.headless);
+            outPkt.write<uint8_t>(1); // headless
             outPkt.write<uint8_t>(gServerConfig.nametags);
             outPkt.write<uint8_t>(gServerConfig.maxPlayers);
             outPkt.write<uint8_t>(gServerConfig.pauseAnywhere);

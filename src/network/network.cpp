@@ -7,11 +7,15 @@
 #include <cstring>
 #include <thread>
 
+constexpr int MAX_SOCKET_RECV_PER_TICK = 256;
+
 std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
 std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs{};
 std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds{};
 std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
+
+static CoopNetNetworkSystem *gCoopNet = nullptr;
 
 void clearNetworkPlayer(int globalIndex) {
     uint64_t peerId = gNetworkPlayerPeerIds[globalIndex];
@@ -26,9 +30,16 @@ void clearNetworkPlayers() {
     gNetworkPlayerCoopNetIds.clear();
 }
 
+static void clearCoopNetPlayers() {
+    for (int i = 1; i < MAX_PLAYERS; i++) {
+        if (gNetworkPlayerPeerIds[i] != 0) clearNetworkPlayer(i);
+    }
+    gNetworkPlayerCoopNetIds.clear();
+}
+
 NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a) {
     for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayers[i].connected && sockaddrInEqual(a, gNetworkPlayerAddrs[i])) {
+        if (gNetworkPlayers[i].connected && gNetworkPlayerPeerIds[i] == 0 && sockaddrInEqual(a, gNetworkPlayerAddrs[i])) {
             return &gNetworkPlayers[i];
         }
     }
@@ -121,17 +132,21 @@ void SocketNetworkSystem::shutdown() {
     }
 }
 
-void SocketNetworkSystem::update() {
-    if (udpSock) {
-        uint8_t buffer[PACKET_LENGTH];
+void SocketNetworkSystem::pollSocket() {
+    if (!udpSock) return;
+    uint8_t buffer[PACKET_LENGTH];
+    for (int i = 0; i < MAX_SOCKET_RECV_PER_TICK; i++) {
         sockaddr_in clientAddr;
         std::memset(&clientAddr, 0, sizeof(clientAddr));
         ssize_t received = udpSock->receive(buffer, sizeof(buffer), clientAddr);
-        if (received > 0) {
-            CoopPacket pkt(udpSock->getSock(), clientAddr, 0, buffer, received);
-            pkt.handle();
-        }
+        if (received <= 0) break;
+        CoopPacket pkt(udpSock->getSock(), clientAddr, 0, buffer, received);
+        pkt.handle();
     }
+}
+
+void SocketNetworkSystem::update() {
+    pollSocket();
     updateReliablePackets();
 }
 
@@ -152,17 +167,15 @@ NetworkPlayer *SocketNetworkSystem::getPlayerFromSender(const sockaddr_in &a, ui
     return getNetworkPlayerFromAddr(a);
 }
 
+
 void CoopNetNetworkSystem::onConnected(uint64_t userId) {
     Logging::log("NETWORK", "Connected to CoopNet! ID: {}", userId);
-    auto *coopnet = static_cast<CoopNetNetworkSystem*>(gNetworkSystem.get());
-    if (coopnet) {
-        coopnet->setLocalUserId(userId);
-    }
+    if (gCoopNet) gCoopNet->setLocalUserId(userId);
 }
 
 void CoopNetNetworkSystem::onDisconnected(bool intentional) {
     Logging::log("NETWORK", "Disconnected from CoopNet. Intentional: {}", intentional);
-    clearNetworkPlayers();
+    clearCoopNetPlayers();
 }
 
 void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint64_t dataLength) {
@@ -175,20 +188,16 @@ void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint6
 void CoopNetNetworkSystem::onLobbyJoined(uint64_t lobbyId, uint64_t userId, uint64_t ownerId, uint64_t destId) {
     Logging::log("NETWORK", "Joined/Created lobby ID: {} (dest: {}) (Owner: {})", lobbyId, destId, ownerId);
     gNetworkPlayerCoopNetIds[userId] = destId;
-    auto *coopnet = static_cast<CoopNetNetworkSystem*>(gNetworkSystem.get());
-    if (coopnet) {
-        coopnet->setLocalLobbyId(lobbyId);
-    }
+    if (gCoopNet) gCoopNet->setLocalLobbyId(lobbyId);
 }
 
 void CoopNetNetworkSystem::onLobbyLeft(uint64_t lobbyId, uint64_t userId) {
-    Logging::log("NETWORK", "Left lobby ID: {}", lobbyId);
-    auto *coopnet = static_cast<CoopNetNetworkSystem*>(gNetworkSystem.get());
-    if (coopnet) {
-        if (lobbyId == coopnet->getLocalLobbyId() && userId == coopnet->getLocalUserId()) {
-            coopnet->setLocalLobbyId(0);
-        }
-    }
+    Logging::log("NETWORK", "User {} Left lobby {}", userId, lobbyId);
+    //if (gCoopNet) {
+    //    if (lobbyId == gCoopNet->getLocalLobbyId() && userId == gCoopNet->getLocalUserId()) {
+    //        gCoopNet->setLocalLobbyId(0);
+    //    }
+    //}
 }
 
 void CoopNetNetworkSystem::onError(enum MPacketErrorNumber error, uint64_t tag) {
@@ -228,21 +237,24 @@ bool CoopNetNetworkSystem::init(int port) {
     gCoopNetCallbacks.OnPeerDisconnected = CoopNetNetworkSystem::onPeerDisconnect;
     gCoopNetCallbacks.OnLoadBalance = CoopNetNetworkSystem::onLoadBalance;
 
+    gCoopNet = this;
     CoopNetRc rc = coopnet_begin("net.coop64.us", 34197, gServerConfig.name.c_str(), 0);
     if (rc == COOPNET_OK) {
         Logging::log("NETWORK", "Initialized CoopNet System");
         needsLobbyCreate = true;
         return true;
     }
+    gCoopNet = nullptr;
     Logging::log("NETWORK", "Failed to initialize CoopNet System");
     return false;
 }
 
 void CoopNetNetworkSystem::shutdown() {
     coopnet_shutdown();
+    gCoopNet = nullptr;
 }
 
-void CoopNetNetworkSystem::update() {
+void CoopNetNetworkSystem::pollCoopNet() {
     coopnet_update();
     if (needsLobbyCreate && localUserId != 0) {
         needsLobbyCreate = false;
@@ -251,6 +263,10 @@ void CoopNetNetworkSystem::update() {
             Logging::log("NETWORK", "Created CoopNet lobby successfully");
         }
     }
+}
+
+void CoopNetNetworkSystem::update() {
+    pollCoopNet();
     updateReliablePackets();
     std::this_thread::sleep_for(std::chrono::milliseconds(33));
 }
@@ -272,11 +288,61 @@ NetworkPlayer *CoopNetNetworkSystem::getPlayerFromSender(const sockaddr_in &a, u
     return getNetworkPlayerFromPeerId(peerId);
 }
 
+
+HybridNetworkSystem::HybridNetworkSystem() : socketSys(std::make_unique<SocketNetworkSystem>()), coopSys(std::make_unique<CoopNetNetworkSystem>()) {}
+
+bool HybridNetworkSystem::init(int port) {
+    if (!socketSys->init(port)) {
+        return false;
+    }
+
+    coopEnabled = coopSys->init(port);
+    if (!coopEnabled) {
+        return false;
+    }
+    return true;
+}
+
+void HybridNetworkSystem::shutdown() {
+    if (coopEnabled) {
+        coopSys->shutdown();
+        coopEnabled = false;
+    }
+    socketSys->shutdown();
+}
+
+void HybridNetworkSystem::update() {
+    socketSys->pollSocket();
+    if (coopEnabled) coopSys->pollCoopNet();
+    updateReliablePackets();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+}
+
+void HybridNetworkSystem::sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) {
+    if (peerId != 0) {
+        coopSys->sendTo(addr, peerId, data, len);
+    } else {
+        socketSys->sendTo(addr, peerId, data, len);
+    }
+}
+
+bool HybridNetworkSystem::isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) {
+    if (p1 != 0 || p2 != 0) return coopSys->isSameEndpoint(a1, p1, a2, p2);
+    return socketSys->isSameEndpoint(a1, p1, a2, p2);
+}
+
+NetworkPlayer *HybridNetworkSystem::getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) {
+    if (peerId != 0) return coopSys->getPlayerFromSender(a, peerId);
+    return socketSys->getPlayerFromSender(a, peerId);
+}
+
 bool networkInit(NetworkSystemType type, int port) {
     if (type == SYS_SOCKET) {
         gNetworkSystem = std::make_unique<SocketNetworkSystem>();
     } else if (type == SYS_COOPNET) {
         gNetworkSystem = std::make_unique<CoopNetNetworkSystem>();
+    } else if (type == SYS_BOTH) {
+        gNetworkSystem = std::make_unique<HybridNetworkSystem>();
     } else {
         return false;
     }

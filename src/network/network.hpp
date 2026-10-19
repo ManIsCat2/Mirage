@@ -12,7 +12,8 @@ constexpr int MAX_PLAYERS = 16;
 
 enum NetworkSystemType {
     SYS_SOCKET = 0,
-    SYS_COOPNET = 1
+    SYS_COOPNET = 1,
+    SYS_BOTH = 2
 };
 
 struct PlayerPalette {
@@ -81,6 +82,9 @@ public:
     bool isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) override;
     NetworkPlayer *getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) override;
     bool requireServerBroadcast() const override { return true; }
+
+    void pollSocket();
+    UDPSocket *getUdpSocket() { return udpSock; }
 };
 
 class CoopNetNetworkSystem : public NetworkSystem {
@@ -107,10 +111,28 @@ public:
     NetworkPlayer *getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) override;
     bool requireServerBroadcast() const override { return false; }
 
+    void pollCoopNet();
+
     void setLocalUserId(uint64_t id) { localUserId = id; }
     void setLocalLobbyId(uint64_t id) { localLobbyId = id; }
     uint64_t getLocalLobbyId() { return localLobbyId; }
     uint64_t getLocalUserId() { return localUserId; }
+};
+
+class HybridNetworkSystem : public NetworkSystem {
+private:
+    std::unique_ptr<SocketNetworkSystem> socketSys;
+    std::unique_ptr<CoopNetNetworkSystem> coopSys;
+    bool coopEnabled = false;
+public:
+    HybridNetworkSystem();
+    bool init(int port) override;
+    void shutdown() override;
+    void update() override;
+    void sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) override;
+    bool isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) override;
+    NetworkPlayer *getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) override;
+    bool requireServerBroadcast() const override { return true; }
 };
 
 extern std::unique_ptr<NetworkSystem> gNetworkSystem;

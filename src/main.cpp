@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     gNetworkPlayers[0].type = NPT_LOCAL;
     gNetworkPlayers[0].globalIndex = 0;
     gNetworkPlayers[0].connected = true;
-    gNetworkPlayers[0].name = gServerConfig.name;
+    gNetworkPlayers[0].name = MIRAGE_NAME;
     gNetworkPlayers[0].currLevelNum = 16;
     gNetworkPlayers[0].currAreaIndex = 1;
 

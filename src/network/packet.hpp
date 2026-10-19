@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <cstring>
+#include <type_traits>
+#include <algorithm>
 #include <cstdint>
 #include <chrono>
 #include <map>
@@ -84,8 +86,7 @@ private:
     socket_t sock = 0;
     sockaddr_in addr{};
     uint64_t peerId = 0;
-    std::vector<uint8_t> rawData;
-    std::vector<uint8_t> outBuffer;
+    std::vector<uint8_t> data;
     size_t offset = 3;
 
     CoopPacket(socket_t s, sockaddr_in a, uint64_t pId, uint8_t pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex);
@@ -122,20 +123,20 @@ public:
     template<typename T>
     T read(size_t length = 0) {
         if constexpr(std::is_same_v<T, std::string>) {
-            if (offset >= rawData.size()) return "";
-            size_t available = rawData.size() - offset;
+            if (offset >= data.size()) return "";
+            size_t available = data.size() - offset;
             size_t actualLen = std::min(length, available);
-            std::string val(reinterpret_cast<const char*>(rawData.data() + offset), actualLen);
+            std::string val(reinterpret_cast<const char*>(data.data() + offset), actualLen);
             offset += std::min(length, available);
             return val;
         } else {
             constexpr size_t sz = sizeof(T);
-            if (offset + sz > rawData.size()) {
-                offset = rawData.size();
+            if (offset + sz > data.size()) {
+                offset = data.size();
                 return T(0);
             }
             T val{};
-            std::memcpy(&val, rawData.data() + offset, sz);
+            std::memcpy(&val, data.data() + offset, sz);
             offset += sz;
             return val;
         }
@@ -145,17 +146,17 @@ public:
     void write(const T &val, size_t length = 0) {
         if constexpr(std::is_same_v<T, std::string>) {
             size_t strLen = val.length();
-            outBuffer.reserve(outBuffer.size() + length);
+            data.reserve(data.size() + length);
             for (size_t i = 0; i < length; ++i) {
-                if (i < strLen) outBuffer.push_back(static_cast<uint8_t>(val[i]));
-                else outBuffer.push_back(0x00);
+                if (i < strLen) data.push_back(static_cast<uint8_t>(val[i]));
+                else data.push_back(0x00);
             }
         } else {
             constexpr size_t sz = sizeof(T);
-            outBuffer.reserve(outBuffer.size() + sz);
+            data.reserve(data.size() + sz);
             const uint8_t *ptr = reinterpret_cast<const uint8_t*>(&val);
             for (size_t i = 0; i < sz; ++i) {
-                outBuffer.push_back(ptr[i]);
+                data.push_back(ptr[i]);
             }
         }
     }
