@@ -21,7 +21,7 @@ UDPSocket::UDPSocket(int port) {
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
-        Logging::log("SERVER", "Failed to create socket");
+        Logging::log("SERVER", "failed to create socket");
         exit(1);
     }
 
@@ -43,7 +43,7 @@ UDPSocket::UDPSocket(int port) {
     serverAddr.sin_port = htons(port);
 
     if (bind(sock, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
-        Logging::log("SERVER", "Failed to bind port");
+        Logging::log("SERVER", "failed to bind port");
         exit(1);
     }
 }

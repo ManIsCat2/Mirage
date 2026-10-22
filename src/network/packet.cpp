@@ -47,7 +47,7 @@ CoopPacket::CoopPacket(socket_t s, sockaddr_in a, uint64_t pId, const uint8_t *c
     uLongf destLen = dest.size();
     
     if (uncompress(dest.data(), &destLen, compData, compLen) != Z_OK) {
-        Logging::log("SERVER", "Failed to decompress packet");
+        Logging::log("SERVER", "failed to decompress packet");
         return;
     }
     
@@ -199,12 +199,12 @@ void CoopPacket::sendTo(sockaddr_in dest, uint64_t destPeerId) {
         if (gServerConfig.whitelist.size() > 0) {
             if (std::find(gServerConfig.whitelist.begin(), gServerConfig.whitelist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.whitelist.end()) {
             } else {
-                Logging::log("SERVER", "Ignoring send for blacklisted client with peerId {}", peerId);
+                Logging::log("SERVER", "ignoring send for blacklisted client with peer id {}", peerId);
                 return;
             }
         }
         if (std::find(gServerConfig.blacklist.begin(), gServerConfig.blacklist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.blacklist.end()) {
-            Logging::log("SERVER", "Ignoring send for blacklisted client with peerId {}", peerId);
+            Logging::log("SERVER", "ignoring send for blacklisted client with peer id {}", peerId);
             return;
         }
     }
@@ -404,7 +404,7 @@ void CoopPacket::execute() {
         }
         case PACKET_MOD_LIST_REQUEST: {
             std::string version = read<std::string>(128);
-            Logging::log("SERVER", "Received mod list request with version: {}", version);
+            Logging::log("SERVER", "received mod list request with version {}", version);
 
             packetOrderedBegin();
 
@@ -490,7 +490,7 @@ void CoopPacket::execute() {
                                 file.read(reinterpret_cast<char*>(&chunk[chunkFill]), fileReadLength);
                             }
                         } else {
-                            Logging::log("SERVER", "Failed to open mod file for download: {}", modFile.realPath);
+                            Logging::log("SERVER", "failed to open mod file for download: {}", modFile.realPath);
                         }
 
                         chunkFill += fileReadLength;
@@ -519,7 +519,7 @@ void CoopPacket::execute() {
             bool exists = (gNetworkSystem->getPlayerFromSender(addr, peerId) != nullptr);
 
             if (exists) {
-                Logging::log("SERVER", "Received join request from already joined client, ignoring");
+                Logging::log("SERVER", "received join request from already joined client, ignoring");
                 break;
             }
             std::string version = read<std::string>(128);
@@ -530,7 +530,7 @@ void CoopPacket::execute() {
             }
             std::string name = read<std::string>(64);
 
-            Logging::log("SERVER", "Received join request: {} and from {} ({})", version, name, peerId);
+            Logging::log("SERVER", "received join request with version {} from user {} ({})", version, name, peerId);
 
             uint8_t globalIndex = 0;
             uint8_t connectedCount = 0;
@@ -544,7 +544,7 @@ void CoopPacket::execute() {
             }
 
             if (!globalIndex || !isValidGlobalIndex(globalIndex)) {
-                Logging::log("SERVER", "No available global indices, server full, dropping request from {}", name);
+                Logging::log("SERVER", "no available global indices, server full, dropping request from {}", name);
                 break;
             }
 
@@ -607,7 +607,7 @@ void CoopPacket::execute() {
             break;
         }
         case PACKET_NETWORK_PLAYERS_REQUEST: {
-            Logging::log("SERVER", "Received network players request");
+            Logging::log("SERVER", "received network players request");
 
             uint8_t connectedCount = 0;
             for (const auto &player : gNetworkPlayers) {
@@ -657,7 +657,7 @@ void CoopPacket::execute() {
             outPkt.write<uint8_t>(globalIndex);
             outPkt.write<double>(timestamp);
 
-            Logging::log("SERVER", "Received ping from {}", gNetworkPlayers[globalIndex].name);
+            Logging::log("SERVER", "received ping from {}", gNetworkPlayers[globalIndex].name);
 
             outPkt.sendBack();
             break;
@@ -667,7 +667,7 @@ void CoopPacket::execute() {
             if (!isValidGlobalIndex(globalIndex)) break;
             double timestamp = read<double>();
 
-            Logging::log("SERVER", "Received pong from {}", gNetworkPlayers[globalIndex].name);
+            Logging::log("SERVER", "received pong from {}", gNetworkPlayers[globalIndex].name);
             break;
         }
         case PACKET_CHANGE_LEVEL: {
@@ -678,7 +678,7 @@ void CoopPacket::execute() {
 
             NetworkPlayer *np = gNetworkSystem->getPlayerFromSender(addr, peerId);
             if (np) {
-                Logging::log("SERVER", "Received level change from {}", np->name);
+                Logging::log("SERVER", "received level change from {}", np->name);
                 np->currCourseNum = courseNum;
                 np->currActNum = actNum;
                 np->currLevelNum = levelNum;
@@ -736,7 +736,7 @@ void CoopPacket::execute() {
 
             NetworkPlayer *np = &gNetworkPlayers[globalIndex];
 
-            Logging::log("SERVER", "Received area inform from {}", np->name);
+            Logging::log("SERVER", "received area inform from {}", np->name);
 
             np->currLevelAreaSeqId = seq;
             np->currLevelSyncValid = levelSyncValid;
@@ -757,7 +757,7 @@ void CoopPacket::execute() {
                 msgLen = MAX_CHAT_MSG_LENGTH - 1;
             }
             std::string msg = read<std::string>(msgLen);
-            Logging::log("SERVER", "Received message from {}\\#ffffff\\: {}", gNetworkPlayers[globalIndex].name, msg);
+            Logging::log("SERVER", "received message from {}\\#ffffff\\: {}", gNetworkPlayers[globalIndex].name, msg);
             gGui.chatLog.push_back(gNetworkPlayers[globalIndex].name + ": " + msg);
             break;
         }
@@ -769,12 +769,12 @@ void CoopPacket::execute() {
             outPkt.write<uint8_t>(globalIndex);
             outPkt.sendToAll();
 
-            Logging::log("SERVER", "Player {} disconnected", gNetworkPlayers[globalIndex].name);
+            Logging::log("SERVER", "player {} disconnected", gNetworkPlayers[globalIndex].name);
             clearNetworkPlayer(globalIndex);
             break;
         }
         default: {
-            Logging::log("SERVER", "Received unimplemented packet type {}", pktType);
+            Logging::log("SERVER", "received unimplemented packet type {}", pktType);
             break;
         }
     }
