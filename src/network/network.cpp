@@ -82,6 +82,10 @@ NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum, int16
     return nullptr;
 }
 
+std::string getNetworkPlayerName(int globalIndex) {
+    return gNetworkPlayers[globalIndex].name + "\\#reset\\";
+}
+
 void NetworkSystem::sendToPlayer(int globalIndex, const uint8_t *data, size_t len) {
     if (globalIndex >= 0 && globalIndex < MAX_PLAYERS) {
         sendTo(gNetworkPlayerAddrs[globalIndex], gNetworkPlayerPeerIds[globalIndex], data, len);

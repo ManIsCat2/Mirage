@@ -141,5 +141,7 @@ extern NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum
 extern NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a);
 extern NetworkPlayer *getNetworkPlayerFromPeerId(uint64_t peerId);
 
+extern std::string getNetworkPlayerName(int globalIndex);
+
 extern bool networkInit(NetworkSystemType type, int port);
 extern void networkShutdown();

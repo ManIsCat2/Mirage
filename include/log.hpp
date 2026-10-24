@@ -11,7 +11,7 @@ namespace Logging {
     void log(const std::string &title, std::format_string<Args...> fmt, Args &&...args) {
         std::string str = std::format(fmt, std::forward<Args>(args)...);
 
-        std::regex pattern(R"(\\#(?:([0-9a-fA-F]{6})|([0-9a-fA-F]{3}))\\|(\\#\\))");
+        std::regex pattern(R"(\\#(?:([0-9a-fA-F]{6})|([0-9a-fA-F]{3}))\\|(\\#\\)|(\\#reset\\))");
 
         auto it = std::sregex_iterator(str.begin(), str.end(), pattern);
         auto end = std::sregex_iterator();
@@ -23,6 +23,13 @@ namespace Logging {
         for (; it != end; it++) {
             const std::smatch &match = *it;
             result.append(str, lastPos, match.position() - lastPos);
+            lastPos = match.position() + match.length();
+
+            if (match[4].matched) {
+                result.append("\033[39m");
+                colorApplied = true;
+                continue;
+            }
 
             uint8_t r = 0, g = 0, b = 0;
 
@@ -44,8 +51,6 @@ namespace Logging {
             ansiSeq << "\e[38;2;" << static_cast<int>(r) << ";" << static_cast<int>(g) << ";" << static_cast<int>(b) << "m";
             result.append(ansiSeq.str());
             colorApplied = true;
-
-            lastPos = match.position() + match.length();
         }
         result.append(str, lastPos, std::string::npos);
 

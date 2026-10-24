@@ -161,6 +161,7 @@ public:
         }
     }
 
+    std::string getSenderIdentifier(void);
     void sendTo(sockaddr_in dest, uint64_t destPeerId);
     void sendTo(int globalIdx);
     void sendBack();
