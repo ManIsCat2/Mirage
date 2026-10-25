@@ -6,6 +6,7 @@
 #include <array>
 #include <memory>
 #include "socket.hpp"
+#include "endpoint.hpp"
 #include "libcoopnet.h"
 
 constexpr int MAX_PLAYERS = 16;
@@ -47,8 +48,7 @@ enum NetworkPlayerType {
 };
 
 extern std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers;
-extern std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs;
-extern std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds;
+extern std::array<Endpoint, MAX_PLAYERS> gNetworkPlayerEndpoints;
 extern std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds;
 extern void clearNetworkPlayer(int globalIndex);
 extern void clearNetworkPlayers();
@@ -60,15 +60,13 @@ public:
     virtual bool init(int port) = 0;
     virtual void shutdown() = 0;
     virtual void update() = 0;
-    virtual void sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) = 0;
-    virtual bool isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) = 0;
-    virtual NetworkPlayer *getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) = 0;
+    virtual void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) = 0;
     virtual bool requireServerBroadcast() const = 0;
 
     void sendToPlayer(int globalIndex, const uint8_t *data, size_t len);
     void sendToAll(const uint8_t *data, size_t len, int ignoreIndex = -1);
 protected:
-    void updateReliablePackets();
+    void updateReliables();
 };
 
 class SocketNetworkSystem : public NetworkSystem {
@@ -78,9 +76,7 @@ public:
     bool init(int port) override;
     void shutdown() override;
     void update() override;
-    void sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) override;
-    bool isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) override;
-    NetworkPlayer *getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) override;
+    void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast() const override { return true; }
 
     void pollSocket();
@@ -106,9 +102,7 @@ public:
     bool init(int port) override;
     void shutdown() override;
     void update() override;
-    void sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) override;
-    bool isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) override;
-    NetworkPlayer *getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) override;
+    void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast() const override { return false; }
 
     void pollCoopNet();
@@ -129,9 +123,7 @@ public:
     bool init(int port) override;
     void shutdown() override;
     void update() override;
-    void sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) override;
-    bool isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) override;
-    NetworkPlayer *getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) override;
+    void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast() const override { return true; }
 };
 

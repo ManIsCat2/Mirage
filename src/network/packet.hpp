@@ -9,7 +9,7 @@
 #include <chrono>
 #include <map>
 #include <list>
-#include "socket.hpp"
+#include "endpoint.hpp"
 
 constexpr size_t PACKET_LENGTH = 3000;
 constexpr uint8_t PACKET_DESTINATION_BROADCAST = ((uint8_t)-1);
@@ -83,15 +83,13 @@ enum PacketLevelMatchType {
 
 class CoopPacket {
 private:
-    socket_t sock = 0;
-    sockaddr_in addr{};
-    uint64_t peerId = 0;
+    Endpoint sender;
     std::vector<uint8_t> data;
     size_t offset = 3;
 
-    CoopPacket(socket_t s, sockaddr_in a, uint64_t pId, uint8_t pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex);
+    CoopPacket(uint8_t pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex);
 
-    std::vector<uint8_t> compressAndHash();
+    std::vector<uint8_t> compress();
     void execute();
     void processOrdered();
     void setOrderedData();
@@ -115,9 +113,9 @@ public:
     int16_t levelNum = 0;
     uint8_t areaIndex = 0;
 
-    CoopPacket(socket_t s, sockaddr_in a, uint64_t pId, const uint8_t *compData, size_t compLen);
-    static CoopPacket createOutgoing(socket_t s, sockaddr_in a, uint64_t pId, uint8_t pType, bool reliable = false, uint8_t levelMatchType = PLMT_NONE, int asGlobalIndex = 0);
-    
+    CoopPacket(const Endpoint &from, const uint8_t *compData, size_t compLen);
+    static CoopPacket createOutgoing(uint8_t pType, bool reliable = false, uint8_t levelMatchType = PLMT_NONE, int asGlobalIndex = 0);
+
     CoopPacket duplicate();
 
     template<typename T>
@@ -162,18 +160,16 @@ public:
     }
 
     std::string getSenderIdentifier(void);
-    void sendTo(sockaddr_in dest, uint64_t destPeerId);
+    void sendTo(const Endpoint &dest);
     void sendTo(int globalIdx);
-    void sendBack();
     void sendToAll();
+    void sendToAllExcept(const Endpoint &skip);
     void handle();
 };
 
 struct ReliablePacket {
     uint16_t seqId;
-    socket_t sock;
-    sockaddr_in addr;
-    uint64_t peerId;
+    Endpoint dest;
     std::vector<uint8_t> compressedData;
     std::chrono::steady_clock::time_point lastSend;
     int sendAttempts;

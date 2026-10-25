@@ -27,6 +27,9 @@ else ifeq ($(shell uname -s),Darwin)
 	endif
 else
 	LINUX_BUILD := 1
+	ifeq ($(shell uname -m),aarch64)
+		ARM_BUILD := 1
+	endif
 endif
 
 COOPNET_LIB :=
@@ -46,7 +49,11 @@ else ifeq ($(OSX_BUILD),1)
 		COOPNET_LIB += ./lib/mac_intel/libjuice.1.6.2.dylib
 	endif
 else
-	LDFLAGS += -Llib/linux -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+	ifeq ($(ARM_BUILD),1)
+		LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+	else
+		LDFLAGS += -Llib/linux/x86_64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+	endif
 endif
 
 SOURCES := $(wildcard $(addsuffix /*.cpp,$(DIRECTORIES)))

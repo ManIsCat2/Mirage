@@ -124,7 +124,7 @@ void Gui::run() {
                             ImGui::TableNextRow();
                             ImGui::TableSetColumnIndex(0); ImGui::Text("%d", i);
                             ImGui::TableSetColumnIndex(1); ImGui::Text("%s", np.name.c_str());
-                            ImGui::TableSetColumnIndex(2); ImGui::Text("%zu", gNetworkPlayerCoopNetIds[gNetworkPlayerPeerIds[i]]);
+                            ImGui::TableSetColumnIndex(2); ImGui::Text("%zu", gNetworkPlayerCoopNetIds[gNetworkPlayerEndpoints[i].peerId]);
                             ImGui::TableSetColumnIndex(3); ImGui::Text("%d", np.currCourseNum);
                             ImGui::TableSetColumnIndex(4); ImGui::Text("%d", np.currLevelNum);
                         }
@@ -164,7 +164,7 @@ void Gui::run() {
                         std::lock_guard<std::mutex> lock(chatMutex);
                         chatLog.push_back("You: " + msg);
 
-                        auto outPkt = CoopPacket::createOutgoing(0, {0}, 0, PACKET_CHAT, true, PLMT_NONE);
+                        auto outPkt = CoopPacket::createOutgoing(PACKET_CHAT, true);
                         Logging::log("SERVER", "sending message: {}", msg);
                         outPkt.write<uint8_t>(0);
                         outPkt.write<uint16_t>(msg.length());

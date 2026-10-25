@@ -10,19 +10,17 @@
 constexpr int MAX_SOCKET_RECV_PER_TICK = 256;
 
 std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
-std::array<sockaddr_in, MAX_PLAYERS> gNetworkPlayerAddrs{};
-std::array<uint64_t, MAX_PLAYERS> gNetworkPlayerPeerIds{};
+std::array<Endpoint, MAX_PLAYERS> gNetworkPlayerEndpoints{};
 std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
 
 static CoopNetNetworkSystem *gCoopNet = nullptr;
 
 void clearNetworkPlayer(int globalIndex) {
-    uint64_t peerId = gNetworkPlayerPeerIds[globalIndex];
+    uint64_t peerId = gNetworkPlayerEndpoints[globalIndex].peerId;
     if (peerId != 0) gNetworkPlayerCoopNetIds.erase(peerId);
     gNetworkPlayers[globalIndex] = NetworkPlayer{};
-    gNetworkPlayerPeerIds[globalIndex] = 0;
-    gNetworkPlayerAddrs[globalIndex] = sockaddr_in{};
+    gNetworkPlayerEndpoints[globalIndex] = Endpoint{};
 }
 
 void clearNetworkPlayers() {
@@ -32,14 +30,14 @@ void clearNetworkPlayers() {
 
 static void clearCoopNetPlayers() {
     for (int i = 1; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayerPeerIds[i] != 0) clearNetworkPlayer(i);
+        if (gNetworkPlayerEndpoints[i].isPeer()) clearNetworkPlayer(i);
     }
     gNetworkPlayerCoopNetIds.clear();
 }
 
 NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a) {
     for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayers[i].connected && gNetworkPlayerPeerIds[i] == 0 && sockaddrInEqual(a, gNetworkPlayerAddrs[i])) {
+        if (gNetworkPlayers[i].connected && !gNetworkPlayerEndpoints[i].isPeer() && sockaddrInEqual(a, gNetworkPlayerEndpoints[i].addr)) {
             return &gNetworkPlayers[i];
         }
     }
@@ -49,7 +47,7 @@ NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a) {
 NetworkPlayer *getNetworkPlayerFromPeerId(uint64_t peerId) {
     if (peerId == 0) return nullptr;
     for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayers[i].connected && gNetworkPlayerPeerIds[i] == peerId) {
+        if (gNetworkPlayers[i].connected && gNetworkPlayerEndpoints[i].peerId == peerId && gNetworkPlayerEndpoints[i].isPeer()) {
             return &gNetworkPlayers[i];
         }
     }
@@ -88,18 +86,18 @@ std::string getNetworkPlayerName(int globalIndex) {
 
 void NetworkSystem::sendToPlayer(int globalIndex, const uint8_t *data, size_t len) {
     if (globalIndex >= 0 && globalIndex < MAX_PLAYERS) {
-        sendTo(gNetworkPlayerAddrs[globalIndex], gNetworkPlayerPeerIds[globalIndex], data, len);
+        sendTo(gNetworkPlayerEndpoints[globalIndex], data, len);
     }
 }
 
 void NetworkSystem::sendToAll(const uint8_t *data, size_t len, int ignoreIndex) {
     for (int i = 1; i < MAX_PLAYERS; i++) {
         if (!gNetworkPlayers[i].connected || i == ignoreIndex) continue;
-        sendTo(gNetworkPlayerAddrs[i], gNetworkPlayerPeerIds[i], data, len);
+        sendTo(gNetworkPlayerEndpoints[i], data, len);
     }
 }
 
-void NetworkSystem::updateReliablePackets() {
+void NetworkSystem::updateReliables() {
     auto now = std::chrono::steady_clock::now();
     auto it = gReliablePackets.begin();
 
@@ -108,7 +106,7 @@ void NetworkSystem::updateReliablePackets() {
         float maxElapsed = std::min(0.07f * (it->sendAttempts * it->sendAttempts), 4.0f);
 
         if (elapsed.count() > maxElapsed) {
-            sendTo(it->addr, it->peerId, it->compressedData.data(), it->compressedData.size());
+            sendTo(it->dest, it->compressedData.data(), it->compressedData.size());
 
             it->lastSend = now;
             it->sendAttempts++;
@@ -144,33 +142,20 @@ void SocketNetworkSystem::pollSocket() {
         std::memset(&clientAddr, 0, sizeof(clientAddr));
         ssize_t received = udpSock->receive(buffer, sizeof(buffer), clientAddr);
         if (received <= 0) break;
-        CoopPacket pkt(udpSock->getSock(), clientAddr, 0, buffer, received);
+        CoopPacket pkt(Endpoint::fromSocket(udpSock->getSock(), clientAddr), buffer, received);
         pkt.handle();
     }
 }
 
 void SocketNetworkSystem::update() {
     pollSocket();
-    updateReliablePackets();
+    updateReliables();
 }
 
-void SocketNetworkSystem::sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) {
-    (void)peerId;
-    if (udpSock) {
-        sendto(udpSock->getSock(), reinterpret_cast<const char*>(data), len, 0, (struct sockaddr*)&addr, sizeof(addr));
-    }
+void SocketNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size_t len) {
+    if (!udpSock) return;
+    sendto(udpSock->getSock(), reinterpret_cast<const char*>(data), len, 0, (struct sockaddr*)&dest.addr, sizeof(dest.addr));
 }
-
-bool SocketNetworkSystem::isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) {
-    (void)p1; (void)p2;
-    return sockaddrInEqual(a1, a2);
-}
-
-NetworkPlayer *SocketNetworkSystem::getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) {
-    (void)peerId;
-    return getNetworkPlayerFromAddr(a);
-}
-
 
 void CoopNetNetworkSystem::onConnected(uint64_t userId) {
     Logging::log("NETWORK", "connected to coopnet as user {}", userId);
@@ -183,9 +168,7 @@ void CoopNetNetworkSystem::onDisconnected(bool intentional) {
 }
 
 void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint64_t dataLength) {
-    sockaddr_in dummyAddr{};
-    std::memset(&dummyAddr, 0, sizeof(dummyAddr));
-    CoopPacket pkt(0, dummyAddr, userId, data, dataLength);
+    CoopPacket pkt(Endpoint::fromPeer(userId), data, dataLength);
     pkt.handle();
 }
 
@@ -218,7 +201,7 @@ void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
     if (np) {
         uint8_t idx = np->globalIndex;
         Logging::log("NETWORK", "player {} disconnected via coopnet peer drop", np->name);
-        auto leaving = CoopPacket::createOutgoing(0, {}, 0, PACKET_LEAVING, true, PLMT_NONE);
+        auto leaving = CoopPacket::createOutgoing(PACKET_LEAVING, true);
         leaving.write<uint8_t>(idx);
         leaving.sendToAll();
         clearNetworkPlayer(idx);
@@ -271,27 +254,13 @@ void CoopNetNetworkSystem::pollCoopNet() {
 
 void CoopNetNetworkSystem::update() {
     pollCoopNet();
-    updateReliablePackets();
+    updateReliables();
     std::this_thread::sleep_for(std::chrono::milliseconds(33));
 }
 
-void CoopNetNetworkSystem::sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) {
-    (void)addr;
-    if (peerId != 0) {
-        coopnet_send_to(peerId, data, len);
-    }
+void CoopNetNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size_t len) {
+    if (dest.isPeer()) coopnet_send_to(dest.peerId, data, len);
 }
-
-bool CoopNetNetworkSystem::isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) {
-    (void)a1; (void)a2;
-    return (p1 != 0 && p1 == p2);
-}
-
-NetworkPlayer *CoopNetNetworkSystem::getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) {
-    (void)a;
-    return getNetworkPlayerFromPeerId(peerId);
-}
-
 
 HybridNetworkSystem::HybridNetworkSystem() : socketSys(std::make_unique<SocketNetworkSystem>()), coopSys(std::make_unique<CoopNetNetworkSystem>()) {}
 
@@ -318,26 +287,16 @@ void HybridNetworkSystem::shutdown() {
 void HybridNetworkSystem::update() {
     socketSys->pollSocket();
     if (coopEnabled) coopSys->pollCoopNet();
-    updateReliablePackets();
+    updateReliables();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
-void HybridNetworkSystem::sendTo(const sockaddr_in &addr, uint64_t peerId, const uint8_t *data, size_t len) {
-    if (peerId != 0) {
-        coopSys->sendTo(addr, peerId, data, len);
+void HybridNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size_t len) {
+    if (dest.isPeer()) {
+        coopSys->sendTo(dest, data, len);
     } else {
-        socketSys->sendTo(addr, peerId, data, len);
+        socketSys->sendTo(dest, data, len);
     }
-}
-
-bool HybridNetworkSystem::isSameEndpoint(const sockaddr_in &a1, uint64_t p1, const sockaddr_in &a2, uint64_t p2) {
-    if (p1 != 0 || p2 != 0) return coopSys->isSameEndpoint(a1, p1, a2, p2);
-    return socketSys->isSameEndpoint(a1, p1, a2, p2);
-}
-
-NetworkPlayer *HybridNetworkSystem::getPlayerFromSender(const sockaddr_in &a, uint64_t peerId) {
-    if (peerId != 0) return coopSys->getPlayerFromSender(a, peerId);
-    return socketSys->getPlayerFromSender(a, peerId);
 }
 
 bool networkInit(NetworkSystemType type, int port) {
