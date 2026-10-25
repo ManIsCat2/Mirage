@@ -11,6 +11,7 @@ LINUX_BUILD := 0
 OSX_BUILD := 0
 
 ARM_BUILD := 0
+BITS_32 := 0
 
 ifeq ($(ASAN),1)
 	CXXFLAGS += -g -fsanitize=address -fsanitize=undefined
@@ -27,8 +28,14 @@ else ifeq ($(shell uname -s),Darwin)
 	endif
 else
 	LINUX_BUILD := 1
-	ifeq ($(shell uname -m),aarch64)
+	machine = $(shell sh -c 'uname -m 2>/dev/null || echo unknown')
+	ifneq (,$(findstring aarch64,$(machine)))
 		ARM_BUILD := 1
+	endif
+
+	ifneq (,$(findstring arm,$(machine)))
+		ARM_BUILD := 1
+		BITS_32 := 1
 	endif
 endif
 
@@ -50,7 +57,10 @@ else ifeq ($(OSX_BUILD),1)
 	endif
 else
 	ifeq ($(ARM_BUILD),1)
-		LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+		ifeq ($(BITS_32),1)
+			LDFLAGS += -Llib/linux/arm -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+		else
+			LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
 	else
 		LDFLAGS += -Llib/linux/x86_64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
 	endif
