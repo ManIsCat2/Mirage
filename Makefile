@@ -61,6 +61,7 @@ else
 			LDFLAGS += -Llib/linux/arm -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
 		else
 			LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+		endif
 	else
 		LDFLAGS += -Llib/linux/x86_64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
 	endif
