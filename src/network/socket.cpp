@@ -14,14 +14,14 @@ UDPSocket::UDPSocket(int port) {
     WSADATA wsaData;
     int res = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (res != 0) {
-        Logging::log("SERVER", "WSAStartup failed: {}", res);
+        Logging::error("SERVER", "WSAStartup failed: {}", res);
         exit(1);
     }
 #endif
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0) {
-        Logging::log("SERVER", "failed to create socket");
+        Logging::error("SERVER", "failed to create socket");
         exit(1);
     }
 
@@ -43,7 +43,7 @@ UDPSocket::UDPSocket(int port) {
     serverAddr.sin_port = htons(port);
 
     if (bind(sock, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
-        Logging::log("SERVER", "failed to bind port");
+        Logging::error("SERVER", "failed to bind port");
         exit(1);
     }
 }

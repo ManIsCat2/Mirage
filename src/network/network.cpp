@@ -112,7 +112,7 @@ void NetworkSystem::updateReliables() {
             it->sendAttempts++;
 
             if (it->sendAttempts >= 15) {
-                Logging::log("SERVER", "giving up on reliable packet with seq {}", it->seqId);
+                Logging::info("SERVER", "giving up on reliable packet with seq {}", it->seqId);
                 it = gReliablePackets.erase(it);
                 continue;
             }
@@ -123,7 +123,7 @@ void NetworkSystem::updateReliables() {
 
 bool SocketNetworkSystem::init(int port) {
     udpSock = new UDPSocket(port);
-    Logging::log("NETWORK", "initialized socket on port {}", port);
+    Logging::info("NETWORK", "initialized socket on port {}", port);
     return true;
 }
 
@@ -158,12 +158,12 @@ void SocketNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size
 }
 
 void CoopNetNetworkSystem::onConnected(uint64_t userId) {
-    Logging::log("NETWORK", "connected to coopnet as user {}", userId);
+    Logging::info("NETWORK", "connected to coopnet as user {}", userId);
     if (gCoopNet) gCoopNet->setLocalUserId(userId);
 }
 
 void CoopNetNetworkSystem::onDisconnected(bool intentional) {
-    Logging::log("NETWORK", "disconnected from coopnet, intentional: {}", intentional);
+    Logging::info("NETWORK", "disconnected from coopnet, intentional: {}", intentional);
     clearCoopNetPlayers();
 }
 
@@ -173,13 +173,13 @@ void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint6
 }
 
 void CoopNetNetworkSystem::onLobbyJoined(uint64_t lobbyId, uint64_t userId, uint64_t ownerId, uint64_t destId) {
-    Logging::log("NETWORK", "joined lobby id {} with dest {}", lobbyId, destId);
+    Logging::info("NETWORK", "joined lobby id {} with dest {}", lobbyId, destId);
     gNetworkPlayerCoopNetIds[userId] = destId;
     if (gCoopNet) gCoopNet->setLocalLobbyId(lobbyId);
 }
 
 void CoopNetNetworkSystem::onLobbyLeft(uint64_t lobbyId, uint64_t userId) {
-    Logging::log("NETWORK", "user {} left lobby {}", userId, lobbyId);
+    Logging::info("NETWORK", "user {} left lobby {}", userId, lobbyId);
     //if (gCoopNet) {
     //    if (lobbyId == gCoopNet->getLocalLobbyId() && userId == gCoopNet->getLocalUserId()) {
     //        gCoopNet->setLocalLobbyId(0);
@@ -188,19 +188,19 @@ void CoopNetNetworkSystem::onLobbyLeft(uint64_t lobbyId, uint64_t userId) {
 }
 
 void CoopNetNetworkSystem::onError(enum MPacketErrorNumber error, uint64_t tag) {
-    Logging::log("NETWORK", "coopnet error: {} tag: {}", (int)error, tag);
+    Logging::error("NETWORK", "coopnet error: {} tag: {}", (int)error, tag);
 }
 
 void CoopNetNetworkSystem::onPeerConnect(uint64_t peerId) {
-    Logging::log("NETWORK", "peer {} connected", peerId);
+    Logging::info("NETWORK", "peer {} connected", peerId);
 }
 
 void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
-    Logging::log("NETWORK", "peer {} disconnected", peerId);
+    Logging::info("NETWORK", "peer {} disconnected", peerId);
     NetworkPlayer *np = getNetworkPlayerFromPeerId(peerId);
     if (np) {
         uint8_t idx = np->globalIndex;
-        Logging::log("NETWORK", "player {} disconnected via coopnet peer drop", np->name);
+        Logging::info("NETWORK", "player {} disconnected via coopnet peer drop", np->name);
         auto leaving = CoopPacket::createOutgoing(PACKET_LEAVING, true);
         leaving.write<uint8_t>(idx);
         leaving.sendToAll();
@@ -227,12 +227,12 @@ bool CoopNetNetworkSystem::init(int port) {
     gCoopNet = this;
     CoopNetRc rc = coopnet_begin("net.coop64.us", 34197, gServerConfig.name.c_str(), 0);
     if (rc == COOPNET_OK) {
-        Logging::log("NETWORK", "initialized coopnet");
+        Logging::info("NETWORK", "initialized coopnet");
         needsLobbyCreate = true;
         return true;
     }
     gCoopNet = nullptr;
-    Logging::log("NETWORK", "failed to initialize coopnet");
+    Logging::error("NETWORK", "failed to initialize coopnet");
     return false;
 }
 
@@ -247,7 +247,7 @@ void CoopNetNetworkSystem::pollCoopNet() {
         needsLobbyCreate = false;
         CoopNetRc rc = coopnet_lobby_create(gServerConfig.game.c_str(), gServerConfig.version.c_str(), gServerConfig.name.c_str(), gServerConfig.mode.c_str(), gServerConfig.maxPlayers, gServerConfig.password.c_str(), gServerConfig.description.c_str());
         if (rc == COOPNET_OK) {
-            Logging::log("NETWORK", "created coopnet lobby successfully");
+            Logging::info("NETWORK", "created coopnet lobby successfully");
         }
     }
 }
@@ -315,7 +315,7 @@ bool networkInit(NetworkSystemType type, int port) {
 
 void networkShutdown() {
     if (gNetworkSystem) {
-        Logging::log("SERVER", "shutting down");
+        Logging::info("SERVER", "shutting down");
         gNetworkSystem->shutdown();
         gNetworkSystem.reset();
     }

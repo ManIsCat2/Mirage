@@ -15,7 +15,7 @@ public:
     static Endpoint fromPeer(uint64_t id);
 
     bool isPeer() const { return peerId != 0; }
-    bool isBlocked(void) const;
+    bool isAllowed(void) const;
 
     bool operator==(const Endpoint &o) const;
     bool operator!=(const Endpoint &o) const { return !(*this == o); }

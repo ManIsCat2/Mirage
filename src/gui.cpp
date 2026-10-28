@@ -33,7 +33,7 @@ void Gui::stop() {
 
 void Gui::run() {
     if (!glfwInit()) {
-        Logging::log("GUI", "failed to initialize GLFW");
+        Logging::error("GUI", "failed to initialize GLFW");
         return;
     }
 
@@ -61,7 +61,7 @@ void Gui::run() {
 
     char chatInputBuf[256] = "";
 
-    Logging::log("GUI", "gui running");
+    Logging::info("GUI", "gui running");
 
     while (running && !glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -165,7 +165,7 @@ void Gui::run() {
                         chatLog.push_back("You: " + msg);
 
                         auto outPkt = CoopPacket::createOutgoing(PACKET_CHAT, true);
-                        Logging::log("SERVER", "sending message: {}", msg);
+                        Logging::info("SERVER", "sending message: {}", msg);
                         outPkt.write<uint8_t>(0);
                         outPkt.write<uint16_t>(msg.length());
                         outPkt.write<std::string>(msg, msg.length());

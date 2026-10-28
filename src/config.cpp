@@ -53,7 +53,7 @@ static int parseNetworkSystem(const json &value) {
         }
     }
 
-    Logging::log("CONFIG", "unknown network system {}, defaulting to socket", value.dump());
+    Logging::warn("CONFIG", "unknown network system {}, defaulting to socket", value.dump());
     return SYS_SOCKET;
 }
 
@@ -74,7 +74,7 @@ void ServerConfig::read(const std::string &filename) {
 
     json data = json::parse(file, nullptr, false);
     if (data.is_discarded() || !data.is_object()) {
-        Logging::log("CONFIG", "could not parse {}, using defaults", filename);
+        Logging::warn("CONFIG", "could not parse {}, using defaults", filename);
         return;
     }
 
@@ -110,10 +110,10 @@ void ServerConfig::read(const std::string &filename) {
     for (const auto &entry : readArray<std::string>(data, "mods")) {
         CoopMod mod;
         if (mod.load(entry)) {
-            Logging::log("CONFIG", "loaded mod {}", mod.name);
+            Logging::info("CONFIG", "loaded mod {}", mod.name);
             mods.push_back(mod);
         } else {
-            Logging::log("CONFIG", "failed to load mod at {}", entry);
+            Logging::error("CONFIG", "failed to load mod at {}", entry);
         }
     }
 }

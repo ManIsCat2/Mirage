@@ -25,17 +25,17 @@ NetworkPlayer *Endpoint::getPlayer() {
     return isPeer() ? getNetworkPlayerFromPeerId(peerId) : getNetworkPlayerFromAddr(addr);
 }
 
-bool Endpoint::isBlocked(void) const {
+bool Endpoint::isAllowed(void) const {
     if (isPeer()) {
         if (gServerConfig.whitelist.size() > 0) {
             if (std::find(gServerConfig.whitelist.begin(), gServerConfig.whitelist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.whitelist.end()) {
             } else {
-                return true;
+                return false;
             }
         }
         if (std::find(gServerConfig.blacklist.begin(), gServerConfig.blacklist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.blacklist.end()) {
-            return true;
+            return false;
         }
     }
-    return false;
+    return true;
 }
