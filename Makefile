@@ -44,26 +44,26 @@ COOPNET_LIB :=
 # setup linker flags
 ifeq ($(WINDOWS_BUILD),1)
 	CXX := g++ # use g++ for the c++ compiler by default
-	LDFLAGS += -Llib/win64 -lcoopnet -ljuice -lglfw3 -lopengl32 -lgdi32 -lws2_32 -liphlpapi -lbcrypt -static
+	LDFLAGS += -Llib/win64 -lcoopnet -ljuice -lws2_32 -liphlpapi -lbcrypt -static
 else ifeq ($(OSX_BUILD),1)
 	ifeq ($(ARM_BUILD),1)
-		LDFLAGS += -Llib/mac_arm -lcoopnet -lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
+		LDFLAGS += -Llib/mac_arm -lcoopnet -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
 		COOPNET_LIB += ./lib/mac_arm/libcoopnet.dylib
 		COOPNET_LIB += ./lib/mac_arm/libjuice.1.6.2.dylib
 	else
-		LDFLAGS += -Llib/mac_intel -lcoopnet -lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
+		LDFLAGS += -Llib/mac_intel -lcoopnet -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
 		COOPNET_LIB += ./lib/mac_intel/libcoopnet.dylib
 		COOPNET_LIB += ./lib/mac_intel/libjuice.1.6.2.dylib
 	endif
 else
 	ifeq ($(ARM_BUILD),1)
 		ifeq ($(BITS_32),1)
-			LDFLAGS += -Llib/linux/arm -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+			LDFLAGS += -Llib/linux/arm -lcoopnet -ljuice -ldl -lpthread
 		else
-			LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+			LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -ldl -lpthread
 		endif
 	else
-		LDFLAGS += -Llib/linux/x86_64 -lcoopnet -ljuice -lglfw -lGL -ldl -lpthread
+		LDFLAGS += -Llib/linux/x86_64 -lcoopnet -ljuice -ldl -lpthread
 	endif
 endif
 

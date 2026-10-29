@@ -5,7 +5,6 @@
 #include "network/lobby.hpp"
 #include "network/server.hpp"
 #include "savefile.hpp"
-#include "gui.hpp"
 
 static void handleSignal(int sig) {
     gServerRunning.store(false);
@@ -27,12 +26,9 @@ int main(int argc, char *argv[]) {
     gSaveFile.setIndex(gServerConfig.savefileIndex);
     gSaveFile.load();
 
-    if (gServerConfig.gui) gGui.start();
-
     CoopLobby lobby(gServerConfig.port);
     lobby.start();
 
-    if (gServerConfig.gui) gGui.stop();
     gServerConfig.write(SERVER_CONFIGFILE);
 
     return 0;

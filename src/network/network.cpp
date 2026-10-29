@@ -2,12 +2,15 @@
 #include "packet.hpp"
 #include "log.hpp"
 #include "../config.hpp"
+#include "util.hpp"
 #include <chrono>
 #include <algorithm>
 #include <cstring>
 #include <thread>
 
 constexpr int MAX_SOCKET_RECV_PER_TICK = 256;
+constexpr double NETWORK_PLAYER_PING_TIMEOUT = 3.0;
+constexpr double NETWORK_PLAYER_TIMEOUT = 15.0;
 
 std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
 std::array<Endpoint, MAX_PLAYERS> gNetworkPlayerEndpoints{};
@@ -56,6 +59,7 @@ NetworkPlayer *getNetworkPlayerFromPeerId(uint64_t peerId) {
 
 NetworkPlayer *getNetworkPlayerFromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum) {
     for (auto &np : gNetworkPlayers) {
+        if (np.globalIndex == 0)           { continue; }
         if (!np.connected)                 { continue; }
         if (!np.currLevelSyncValid)        { continue; }
         if (np.currCourseNum != courseNum) { continue; }
@@ -68,6 +72,7 @@ NetworkPlayer *getNetworkPlayerFromLevel(int16_t courseNum, int16_t actNum, int1
 
 NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex) {
     for (auto &np : gNetworkPlayers) {
+        if (np.globalIndex == 0)           { continue; }
         if (!np.connected)                 { continue; }
         if (!np.currLevelSyncValid)        { continue; }
         if (!np.currAreaSyncValid)         { continue; }
@@ -121,6 +126,53 @@ void NetworkSystem::updateReliables() {
     }
 }
 
+void NetworkSystem::updatePlayers() {
+    double now = clockElapsed();
+    bool canTimeOut = (gServerConfig.networkSystem != SYS_SOCKET);
+
+    for (int i = 1; i < MAX_PLAYERS; i++) {
+        NetworkPlayer *np = &gNetworkPlayers[i];
+        if (!np->connected) { continue; }
+
+        if (now - np->lastPingSent > NETWORK_PLAYER_PING_TIMEOUT) {
+            auto pkt = CoopPacket::createOutgoing(PACKET_PING, false);
+            pkt.write<uint8_t>(np->globalIndex);
+            pkt.write<double>(now);
+            pkt.sendTo(np->globalIndex);
+            np->lastPingSent = now;
+        }
+    }
+
+    for (int i = 1; i < MAX_PLAYERS; i++) {
+        NetworkPlayer *np = &gNetworkPlayers[i];
+        if (!np->connected) { continue; }
+
+        if (canTimeOut && now - np->lastReceived > NETWORK_PLAYER_TIMEOUT) {
+            Logging::info("SERVER", "dropping globalIndex {} for network inactivity", i);
+            uint8_t globalIndex = gNetworkPlayers[i].globalIndex;
+            Endpoint ep = gNetworkPlayerEndpoints[i];
+
+            auto leaving = CoopPacket::createOutgoing(PACKET_LEAVING, true);
+            leaving.write<uint8_t>(globalIndex);
+            leaving.sendToAllExcept(ep);
+
+            gReliablePackets.remove_if([&ep](const ReliablePacket &p) { return p.dest == ep; });
+            clearNetworkPlayer(i);
+            continue;
+        }
+
+        if (now - np->lastSent > NETWORK_PLAYER_TIMEOUT / 3.0) {
+            auto pkt = CoopPacket::createOutgoing(PACKET_KEEP_ALIVE, false);
+            pkt.sendTo(np->globalIndex);
+        }
+    }
+}
+
+void NetworkSystem::updateNetwork() {
+    updateReliables();
+    updatePlayers();
+}
+
 bool SocketNetworkSystem::init(int port) {
     udpSock = new UDPSocket(port);
     Logging::info("NETWORK", "initialized socket on port {}", port);
@@ -149,7 +201,7 @@ void SocketNetworkSystem::pollSocket() {
 
 void SocketNetworkSystem::update() {
     pollSocket();
-    updateReliables();
+    updateNetwork();
 }
 
 void SocketNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size_t len) {
@@ -254,7 +306,7 @@ void CoopNetNetworkSystem::pollCoopNet() {
 
 void CoopNetNetworkSystem::update() {
     pollCoopNet();
-    updateReliables();
+    updateNetwork();
     std::this_thread::sleep_for(std::chrono::milliseconds(33));
 }
 
@@ -287,7 +339,7 @@ void HybridNetworkSystem::shutdown() {
 void HybridNetworkSystem::update() {
     socketSys->pollSocket();
     if (coopEnabled) coopSys->pollCoopNet();
-    updateReliables();
+    updateNetwork();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
