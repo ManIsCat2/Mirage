@@ -439,7 +439,9 @@ void CoopPacket::execute() {
             });
             break;
         }
-
+        case PACKET_PLAYER: {
+            break;
+        }
         case PACKET_PLAYER_SETTINGS: {
             uint8_t globalIndex = read<uint8_t>();
             if (!isValidGlobalIndex(globalIndex)) break;
@@ -884,7 +886,7 @@ void CoopPacket::execute() {
             }
             std::string msg = read<std::string>(msgLen);
 
-            Logging::info("SERVER", "[{}] PACKET_CHAT received: globalindex {}, size {}, str '{}'", senderIdentifier, globalIndex, msgLen, msg);
+            Logging::info("SERVER", "[{}] PACKET_CHAT received: from '{}', size {}, str '{}'", senderIdentifier, getNetworkPlayerName(globalIndex), msgLen, msg);
             break;
         }
         case PACKET_LEAVING: {
