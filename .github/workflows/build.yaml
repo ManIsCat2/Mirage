@@ -12,12 +12,15 @@ jobs:
               - name: x86_64
                 runner: ubuntu-24.04
                 cxx: g++
+                bits32: 0
               - name: ARM
                 runner: ubuntu-24.04-arm
                 cxx: arm-linux-gnueabihf-g++
+                bits32: 1
               - name: ARM64
                 runner: ubuntu-24.04-arm
                 cxx: aarch64-linux-gnu-g++
+                bits32: 0
         runs-on: ${{ matrix.arch.runner }}
         name: Linux ${{ matrix.arch.name }}
         steps:
@@ -30,7 +33,7 @@ jobs:
                 sudo apt install -y build-essential g++-arm-linux-gnueabihf g++-aarch64-linux-gnu
 
             - name: Build
-              run: make CXX=${{ matrix.arch.cxx }} -j12
+              run: make CXX=${{ matrix.arch.cxx }} BITS_32=${{ matrix.arch.bits32 }} -j12
 
             - name: Upload
               uses: actions/upload-artifact@v4
@@ -75,4 +78,4 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                 name: mirage-windows-${{ matrix.arch.env }}
-                path: ./build/Mirage
+                path: ./build/Mirage.exe
