@@ -30,7 +30,12 @@ jobs:
             - name: Install dependencies
               run: |
                 sudo apt update
-                sudo apt install -y build-essential g++-arm-linux-gnueabihf g++-aarch64-linux-gnu
+                sudo apt install -y build-essential g++-arm-linux-gnueabihf g++-aarch64-linux-gnu zlib1g
+                if [ "${{ matrix.arch.name }}" == "ARM" ]; then
+                    sudo dpkg --add-architecture armhf
+                    sudo apt update
+                    sudo apt install -y zlib1g:armhf
+                fi
 
             - name: Build
               run: make CXX=${{ matrix.arch.cxx }} BITS_32=${{ matrix.arch.bits32 }} -j12
