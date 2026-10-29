@@ -27,7 +27,7 @@ jobs:
             - name: Install dependencies
               run: |
                 sudo apt update
-                sudo apt install -y build-essential gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
+                sudo apt install -y build-essential g++-arm-linux-gnueabihf g++-aarch64-linux-gnu
 
             - name: Build
               run: make CXX=${{ matrix.arch.cxx }} -j12
