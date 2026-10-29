@@ -48,9 +48,6 @@ jobs:
               - name: Win64
                 sys: mingw64
                 env: x86_64
-              - name: Win32
-                sys: mingw32
-                env: i686
         
         name: Windows ${{ matrix.arch.name }}
         runs-on: windows-latest
