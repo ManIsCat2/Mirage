@@ -278,9 +278,9 @@ std::string CoopPacket::getSenderIdentifier(void) {
     if (gServerConfig.networkSystem == SYS_SOCKET) {
         ident = std::to_string(senderGlobalIndex);
     } else if (gServerConfig.networkSystem == SYS_COOPNET) {
-        ident = std::to_string(sender.peerId);
+        ident = std::to_string(gNetworkPlayerCoopNetIds[sender.peerId]);
     } else {
-        ident = std::format("{} - {}", sender.peerId, senderGlobalIndex);
+        ident = std::format("{} - {}", gNetworkPlayerCoopNetIds[sender.peerId], senderGlobalIndex);
     }
     return ident;
 }
