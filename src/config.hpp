@@ -2,6 +2,7 @@
 
 #include "mod.hpp"
 #include "network/network.hpp"
+#include "util.hpp"
 
 #include <cstdint>
 #include <string>

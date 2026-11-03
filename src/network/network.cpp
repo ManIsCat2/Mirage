@@ -2,7 +2,6 @@
 #include "packet.hpp"
 #include "log.hpp"
 #include "../config.hpp"
-#include "util.hpp"
 #include <chrono>
 #include <algorithm>
 #include <cstring>

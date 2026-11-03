@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include "json.hpp"
 #include "log.hpp"
+#include "util.hpp"
 #include "network/network.hpp"
 
 #include <algorithm>
@@ -22,12 +23,6 @@ static std::vector<T> readArray(const json &data, const char *key) {
     return result;
 }
 
-static std::string toLower(std::string text) {
-    // wtf is this :pray:
-    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return text;
-}
-
 static bool isValidNetworkSystem(int id) {
     return id == SYS_SOCKET || id == SYS_COOPNET || id == SYS_BOTH;
 }
@@ -39,7 +34,7 @@ static int parseNetworkSystem(const json &value) {
             return id;
         }
     } else if (value.is_string()) {
-        std::string text = toLower(value.get<std::string>());
+        std::string text = stringToLower(value.get<std::string>());
 
         if (text == "socket") return SYS_SOCKET;
         if (text == "coopnet") return SYS_COOPNET;
@@ -57,7 +52,7 @@ static int parseNetworkSystem(const json &value) {
     return SYS_SOCKET;
 }
 
-std::string networkSystemName(int id) {
+static std::string networkSystemName(int id) {
     switch (id) {
         case SYS_COOPNET: return "coopnet";
         case SYS_BOTH:    return "hybrid";

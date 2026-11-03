@@ -2,12 +2,12 @@
 
 #include <atomic>
 
-class CoopServer {
+class Server {
 private:
     int port;
 public:
-    CoopServer(int p);
-    void runLoop();
+    Server(int p);
+    void run();
     int getPort() const { return port; }
 };
 

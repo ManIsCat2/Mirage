@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstring>
 
-CoopSaveFile gSaveFile;
+SaveFile gSaveFile;
 
 static uint16_t calculateChecksum(const uint8_t *data, size_t size) {
     uint16_t chksum = 0;
@@ -13,7 +13,7 @@ static uint16_t calculateChecksum(const uint8_t *data, size_t size) {
     return chksum;
 }
 
-std::vector<uint8_t> CoopSaveFile::getBuffer() {
+std::vector<uint8_t> SaveFile::getBuffer() {
     std::vector<uint8_t> buffer(EEPROM_SIZE, 0);
     std::ifstream file(SAVE_FILENAME, std::ios::binary);
     if (file.is_open()) {
@@ -23,11 +23,11 @@ std::vector<uint8_t> CoopSaveFile::getBuffer() {
     return buffer;
 }
 
-void CoopSaveFile::setIndex(int idx) {
+void SaveFile::setIndex(int idx) {
     index = idx;
 }
 
-void CoopSaveFile::load() {
+void SaveFile::load() {
     std::ifstream file(SAVE_FILENAME, std::ios::binary);
     if (!file.is_open()) return;
 
@@ -41,7 +41,7 @@ void CoopSaveFile::load() {
     std::memcpy(courseStars, &buffer[fileOffset + 12], 25);
 }
 
-void CoopSaveFile::save() {
+void SaveFile::save() {
     std::vector<uint8_t> buffer(EEPROM_SIZE, 0);
 
     std::ifstream inFile(SAVE_FILENAME, std::ios::binary);
@@ -73,14 +73,14 @@ void CoopSaveFile::save() {
     }
 }
 
-void CoopSaveFile::setFlags(uint32_t flags, int32_t course, uint8_t courseData) {
+void SaveFile::setFlags(uint32_t flags, int32_t course, uint8_t courseData) {
     if (course != -1) {
         courseStars[course] |= courseData;
     }
     saveFlags |= flags;
 }
 
-void CoopSaveFile::removeFlags(uint32_t flags, int32_t course, uint8_t courseData) {
+void SaveFile::removeFlags(uint32_t flags, int32_t course, uint8_t courseData) {
     if (course == -1) {
         saveFlags ^= flags;
     } else {

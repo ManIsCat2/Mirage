@@ -1,9 +1,9 @@
-DIRECTORIES := src src/network src/imgui
+DIRECTORIES := src src/network
 TARGET := Mirage
 BUILD_DIR := build
 CXX := clang++
 ASAN := 0
-CXXFLAGS := -O3 -Iinclude -Isrc/imgui -std=c++23 -MMD -MP
+CXXFLAGS := -O3 -Iinclude -std=c++23 -MMD -MP
 LDFLAGS := -lz
 
 WINDOWS_BUILD := 0

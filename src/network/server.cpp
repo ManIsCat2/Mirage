@@ -7,9 +7,9 @@
 
 std::atomic<bool> gServerRunning{true};
 
-CoopServer::CoopServer(int p) : port(p) {}
+Server::Server(int p) : port(p) {}
 
-void CoopServer::runLoop() {
+void Server::run() {
     if (!networkInit((NetworkSystemType)gServerConfig.networkSystem, port)) {
         Logging::error("SERVER", "failed to initialize network system");
         return;

@@ -2,7 +2,6 @@
 #include <csignal>
 #include "config.hpp"
 #include "network/network.hpp"
-#include "network/lobby.hpp"
 #include "network/server.hpp"
 #include "savefile.hpp"
 
@@ -26,8 +25,8 @@ int main(int argc, char *argv[]) {
     gSaveFile.setIndex(gServerConfig.savefileIndex);
     gSaveFile.load();
 
-    CoopLobby lobby(gServerConfig.port);
-    lobby.start();
+    Server server(gServerConfig.port);
+    server.run();
 
     gServerConfig.write(SERVER_CONFIGFILE);
 

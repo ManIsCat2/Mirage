@@ -9,7 +9,7 @@ constexpr size_t EEPROM_SIZE = 0x200;
 constexpr size_t SAVE_FILE_SIZE = 56;
 const std::string SAVE_FILENAME = "sm64_save.bin";
 
-class CoopSaveFile {
+class SaveFile {
 private:
     int index = 0;
     uint32_t saveFlags = 0;
@@ -23,4 +23,4 @@ public:
     void removeFlags(uint32_t flags, int32_t course, uint8_t courseData);
 };
 
-extern CoopSaveFile gSaveFile;
+extern SaveFile gSaveFile;

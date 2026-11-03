@@ -7,9 +7,8 @@
 #include <memory>
 #include "socket.hpp"
 #include "endpoint.hpp"
+#include "util.hpp"
 #include "libcoopnet.h"
-
-constexpr int MAX_PLAYERS = 16;
 
 enum NetworkSystemType {
     SYS_SOCKET = 0,

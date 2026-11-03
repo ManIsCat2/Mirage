@@ -18,14 +18,6 @@ static uint16_t sCurrentOrderedGroupId = 0;
 static uint16_t sCurrentOrderedSeqId = 0;
 static uint16_t sNextSeqNum = 1;
 
-static inline bool isValidGlobalIndex(int idx) {
-    return idx >= 0 && idx < MAX_PLAYERS;
-}
-
-static inline bool getBit(uint8_t val, uint8_t num) {
-    return (val >> num) & 1;
-}
-
 static void sendSyncValid(const Endpoint &to, NetworkPlayer *np, int16_t course, int16_t act, int16_t level, int16_t area) {
     auto outPkt = CoopPacket::createOutgoing(PACKET_SYNC_VALID, true);
     outPkt.write<int16_t>(course);
@@ -659,7 +651,7 @@ void CoopPacket::execute() {
             outPkt.write<uint8_t>(gServerConfig.pauseAnywhere);
             outPkt.write<uint8_t>(0);
 
-            std::vector<uint8_t> eeprom = gSaveFile.getBuffer();
+            const std::vector<uint8_t> &eeprom = gSaveFile.getBuffer();
             for (int i = 0; i < 512; i++) {
                 outPkt.write<uint8_t>(eeprom[i]);
             }
