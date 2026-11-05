@@ -22,7 +22,7 @@ bool Endpoint::operator==(const Endpoint &o) const {
 }
 
 NetworkPlayer *Endpoint::getPlayer() {
-    return isPeer() ? getNetworkPlayerFromPeerId(peerId) : getNetworkPlayerFromAddr(addr);
+    return isPeer() ? NetworkPlayer::fromPeer(peerId) : NetworkPlayer::fromAddr(addr);
 }
 
 bool Endpoint::isAllowed(void) const {

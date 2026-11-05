@@ -56,8 +56,8 @@ static void playerChangedLevel(NetworkPlayer *np, const Endpoint &from, int16_t 
     np->currLevelNum = level;
     np->currAreaIndex = area;
 
-    NetworkPlayer *npInArea = getNetworkPlayerFromArea(course, act, level, area);
-    NetworkPlayer *npInLevel = getNetworkPlayerFromLevel(course, act, level);
+    NetworkPlayer *npInArea = NetworkPlayer::fromLevelArea(course, act, level, area);
+    NetworkPlayer *npInLevel = NetworkPlayer::fromLevel(course, act, level);
     NetworkPlayer *npAny = (npInArea != nullptr) ? npInArea : npInLevel;
 
     bool inCredits = (act == 99);
@@ -82,7 +82,7 @@ static void playerChangedArea(NetworkPlayer *np, const Endpoint &from, int16_t c
     np->currLevelNum = level;
     np->currAreaIndex = area;
 
-    NetworkPlayer *npInArea = getNetworkPlayerFromArea(course, act, level, area);
+    NetworkPlayer *npInArea = NetworkPlayer::fromLevelArea(course, act, level, area);
 
     bool inCredits = (act == 99);
     if (npInArea == nullptr || inCredits) {
@@ -264,15 +264,16 @@ std::vector<uint8_t> CoopPacket::compress() {
 
 std::string CoopPacket::getSenderIdentifier(void) {
     NetworkPlayer *senderNp = sender.getPlayer();
-    uint8_t senderGlobalIndex = senderNp ? senderNp->globalIndex : 0;
     std::string ident;
+    std::string ipv4 = getIPString(&sender.addr);
+    std::string coopnetId = std::to_string(gNetworkPlayerCoopNetIds[sender.peerId]);
 
     if (gServerConfig.networkSystem == SYS_SOCKET) {
-        ident = std::to_string(senderGlobalIndex);
+        ident = getIPString(&sender.addr);
     } else if (gServerConfig.networkSystem == SYS_COOPNET) {
         ident = std::to_string(gNetworkPlayerCoopNetIds[sender.peerId]);
     } else {
-        ident = std::format("{} - {}", gNetworkPlayerCoopNetIds[sender.peerId], senderGlobalIndex);
+        ident = std::format("{}", sender.isPeer() ? coopnetId : ipv4);
     }
     return ident;
 }
@@ -290,7 +291,7 @@ void CoopPacket::sendTo(const Endpoint &dest) {
         gNetworkSystem->sendTo(dest, compressed.data(), compressed.size());
         double now = clockElapsed();
         for (int i = 1; i < MAX_PLAYERS; i++) {
-            if (gNetworkPlayers[i].connected && gNetworkPlayerEndpoints[i] == dest) {
+            if (gNetworkPlayers[i].connected && gNetworkPlayers[i].endpoint == dest) {
                 gNetworkPlayers[i].lastSent = now;
                 return;
             }
@@ -311,7 +312,7 @@ void CoopPacket::sendTo(const Endpoint &dest) {
 
 void CoopPacket::sendTo(int globalIdx) {
     if (globalIdx >= 0 && globalIdx < MAX_PLAYERS) {
-        sendTo(gNetworkPlayerEndpoints[globalIdx]);
+        sendTo(gNetworkPlayers[globalIdx].endpoint);
     }
 }
 
@@ -326,7 +327,7 @@ void CoopPacket::sendToAllExcept(const Endpoint &skip) {
     for (int i = 1; i < MAX_PLAYERS; i++) {
         if (!gNetworkPlayers[i].connected) continue;
 
-        const Endpoint &dest = gNetworkPlayerEndpoints[i];
+        const Endpoint &dest = gNetworkPlayers[i].endpoint;
         if (skip == dest) continue;
 
         if (gNetworkSystem) {
@@ -632,7 +633,7 @@ void CoopPacket::execute() {
             }
 
             NetworkPlayer *np = &gNetworkPlayers[globalIndex];
-            gNetworkPlayerEndpoints[globalIndex] = sender;
+            gNetworkPlayers[globalIndex].endpoint = sender;
 
             auto outPkt = CoopPacket::createOutgoing(PACKET_JOIN, true);
             outPkt.write<std::string>(gServerConfig.version, 128);
@@ -705,7 +706,7 @@ void CoopPacket::execute() {
             outPkt.write<uint8_t>(connectedCount);
             for (const auto &player : gNetworkPlayers) {
                 if (!player.connected || !isValidGlobalIndex(player.globalIndex)) continue;
-                if (sender == gNetworkPlayerEndpoints[player.globalIndex]) {
+                if (sender == gNetworkPlayers[player.globalIndex].endpoint) {
                     continue;
                 }
 
@@ -893,7 +894,7 @@ void CoopPacket::execute() {
             outPkt.sendToAllExcept(sender);
 
             Logging::info("SERVER", "player '{}' (globalindex {}) disconnected", getNetworkPlayerName(globalIndex), globalIndex);
-            clearNetworkPlayer(globalIndex);
+            gNetworkPlayers[globalIndex].clear();
             break;
         }
         default: {

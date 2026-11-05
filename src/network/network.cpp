@@ -12,51 +12,55 @@ constexpr double NETWORK_PLAYER_PING_TIMEOUT = 3.0;
 constexpr double NETWORK_PLAYER_TIMEOUT = 15.0;
 
 std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
-std::array<Endpoint, MAX_PLAYERS> gNetworkPlayerEndpoints{};
 std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
 
 static CoopNetNetworkSystem *gCoopNet = nullptr;
 
-void clearNetworkPlayer(int globalIndex) {
-    uint64_t peerId = gNetworkPlayerEndpoints[globalIndex].peerId;
-    if (peerId != 0) gNetworkPlayerCoopNetIds.erase(peerId);
-    gNetworkPlayers[globalIndex] = NetworkPlayer{};
-    gNetworkPlayerEndpoints[globalIndex] = Endpoint{};
+void NetworkPlayer::clear(void) {
+    connected = false;
+    type = 0;
+    globalIndex = 0;
+    currLevelAreaSeqId = 0;
+    currCourseNum = 0;
+    currActNum = 0;
+    currLevelNum = 0;
+    currAreaIndex = 0;
+    currLevelSyncValid = 0;
+    currAreaSyncValid = 0;
+    networkId = 0;
+    lastReceived = 0.0f;
+    lastSent = 0.0f;
+    lastPingSent = 0.0f;
+    modelIndex = 0;
+    ping = 0;
+    palette = {};
+    name.clear();
+    discordId.clear();
+
+    if (endpoint.isPeer()) gNetworkPlayerCoopNetIds.erase(endpoint.peerId);
 }
 
-void clearNetworkPlayers() {
-    for (int i = 1; i < MAX_PLAYERS; i++) clearNetworkPlayer(i);
-    gNetworkPlayerCoopNetIds.clear();
-}
-
-static void clearCoopNetPlayers() {
-    for (int i = 1; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayerEndpoints[i].isPeer()) clearNetworkPlayer(i);
-    }
-    gNetworkPlayerCoopNetIds.clear();
-}
-
-NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a) {
+NetworkPlayer *NetworkPlayer::fromAddr(const sockaddr_in &a) {
     for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayers[i].connected && !gNetworkPlayerEndpoints[i].isPeer() && sockaddrInEqual(a, gNetworkPlayerEndpoints[i].addr)) {
+        if (gNetworkPlayers[i].connected && !gNetworkPlayers[i].endpoint.isPeer() && sockaddrInEqual(a, gNetworkPlayers[i].endpoint.addr)) {
             return &gNetworkPlayers[i];
         }
     }
     return nullptr;
 }
 
-NetworkPlayer *getNetworkPlayerFromPeerId(uint64_t peerId) {
+NetworkPlayer *NetworkPlayer::fromPeer(uint64_t peerId) {
     if (peerId == 0) return nullptr;
     for (int i = 0; i < MAX_PLAYERS; i++) {
-        if (gNetworkPlayers[i].connected && gNetworkPlayerEndpoints[i].peerId == peerId && gNetworkPlayerEndpoints[i].isPeer()) {
+        if (gNetworkPlayers[i].connected && gNetworkPlayers[i].endpoint.peerId == peerId && gNetworkPlayers[i].endpoint.isPeer()) {
             return &gNetworkPlayers[i];
         }
     }
     return nullptr;
 }
 
-NetworkPlayer *getNetworkPlayerFromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum) {
+NetworkPlayer *NetworkPlayer::fromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum) {
     for (auto &np : gNetworkPlayers) {
         if (np.globalIndex == 0)           { continue; }
         if (!np.connected)                 { continue; }
@@ -69,7 +73,7 @@ NetworkPlayer *getNetworkPlayerFromLevel(int16_t courseNum, int16_t actNum, int1
     return nullptr;
 }
 
-NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex) {
+NetworkPlayer *NetworkPlayer::fromLevelArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex) {
     for (auto &np : gNetworkPlayers) {
         if (np.globalIndex == 0)           { continue; }
         if (!np.connected)                 { continue; }
@@ -88,16 +92,32 @@ std::string getNetworkPlayerName(int globalIndex) {
     return gNetworkPlayers[globalIndex].name + "\\#reset\\";
 }
 
+void clearNetworkPlayers() {
+    for (int i = 1; i < MAX_PLAYERS; i++) {
+        NetworkPlayer *np = &gNetworkPlayers[i];
+        np->clear();
+    }
+    gNetworkPlayerCoopNetIds.clear();
+}
+
+static void clearCoopNetPlayers() {
+    for (int i = 1; i < MAX_PLAYERS; i++) {
+        NetworkPlayer *np = &gNetworkPlayers[i];
+        if (np->endpoint.isPeer()) np->clear();
+    }
+    gNetworkPlayerCoopNetIds.clear();
+}
+
 void NetworkSystem::sendToPlayer(int globalIndex, const uint8_t *data, size_t len) {
     if (globalIndex >= 0 && globalIndex < MAX_PLAYERS) {
-        sendTo(gNetworkPlayerEndpoints[globalIndex], data, len);
+        sendTo(gNetworkPlayers[globalIndex].endpoint, data, len);
     }
 }
 
 void NetworkSystem::sendToAll(const uint8_t *data, size_t len, int ignoreIndex) {
     for (int i = 1; i < MAX_PLAYERS; i++) {
         if (!gNetworkPlayers[i].connected || i == ignoreIndex) continue;
-        sendTo(gNetworkPlayerEndpoints[i], data, len);
+        sendTo(gNetworkPlayers[i].endpoint, data, len);
     }
 }
 
@@ -149,14 +169,14 @@ void NetworkSystem::updatePlayers() {
         if (canTimeOut && now - np->lastReceived > NETWORK_PLAYER_TIMEOUT) {
             Logging::info("SERVER", "dropping globalIndex {} for network inactivity", i);
             uint8_t globalIndex = gNetworkPlayers[i].globalIndex;
-            Endpoint ep = gNetworkPlayerEndpoints[i];
+            Endpoint &ep = gNetworkPlayers[i].endpoint;
 
             auto leaving = CoopPacket::createOutgoing(PACKET_LEAVING, true);
             leaving.write<uint8_t>(globalIndex);
             leaving.sendToAllExcept(ep);
 
             gReliablePackets.remove_if([&ep](const ReliablePacket &p) { return p.dest == ep; });
-            clearNetworkPlayer(i);
+            gNetworkPlayers[i].clear();
             continue;
         }
 
@@ -248,14 +268,14 @@ void CoopNetNetworkSystem::onPeerConnect(uint64_t peerId) {
 
 void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
     Logging::info("NETWORK", "peer {} disconnected", peerId);
-    NetworkPlayer *np = getNetworkPlayerFromPeerId(peerId);
+    NetworkPlayer *np = NetworkPlayer::fromPeer(peerId);
     if (np) {
         uint8_t idx = np->globalIndex;
         Logging::info("NETWORK", "player {} disconnected via coopnet peer drop", np->name);
         auto leaving = CoopPacket::createOutgoing(PACKET_LEAVING, true);
         leaving.write<uint8_t>(idx);
         leaving.sendToAll();
-        clearNetworkPlayer(idx);
+        gNetworkPlayers[idx].clear();
     }
 }
 

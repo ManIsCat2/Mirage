@@ -40,6 +40,14 @@ struct NetworkPlayer {
     PlayerPalette palette{};
     std::string name;
     std::string discordId;
+
+    Endpoint endpoint;
+
+    static NetworkPlayer *fromAddr(const sockaddr_in &a);
+    static NetworkPlayer *fromPeer(uint64_t peerId);
+    static NetworkPlayer *fromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum);
+    static NetworkPlayer *fromLevelArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex);
+    void clear(void);
 };
 
 enum NetworkPlayerType {
@@ -50,9 +58,7 @@ enum NetworkPlayerType {
 };
 
 extern std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers;
-extern std::array<Endpoint, MAX_PLAYERS> gNetworkPlayerEndpoints;
 extern std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds;
-extern void clearNetworkPlayer(int globalIndex);
 extern void clearNetworkPlayers();
 
 class NetworkSystem {
@@ -132,10 +138,6 @@ public:
 };
 
 extern std::unique_ptr<NetworkSystem> gNetworkSystem;
-extern NetworkPlayer *getNetworkPlayerFromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum);
-extern NetworkPlayer *getNetworkPlayerFromArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex);
-extern NetworkPlayer *getNetworkPlayerFromAddr(const sockaddr_in &a);
-extern NetworkPlayer *getNetworkPlayerFromPeerId(uint64_t peerId);
 
 extern std::string getNetworkPlayerName(int globalIndex);
 
