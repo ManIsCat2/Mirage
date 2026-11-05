@@ -14,7 +14,7 @@ inline const std::string MIRAGE_NAME = "\\#e86100\\Mirage";
 class ServerConfig {
 public:
     int port = 7777;
-    int networkSystem = SYS_SOCKET;
+    NetworkSystemType networkSystem = NetworkSystemType::SOCKET;
 
     std::string version = "v1.5.1";
     std::string name = MIRAGE_NAME;
@@ -34,9 +34,7 @@ public:
     int nametags = 1;
     int maxPlayers = MAX_PLAYERS;
 
-    bool gui = false;
-
-    std::vector<CoopMod> mods;
+    std::vector<Mod> mods;
     std::vector<int64_t> whitelist;
     std::vector<int64_t> blacklist;
 

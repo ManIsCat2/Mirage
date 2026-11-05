@@ -4,16 +4,16 @@
 #include <vector>
 #include <string>
 
-struct CoopModFile {
+struct ModFile {
     std::string relativePath = "";
     std::string realPath = "";
     size_t size = 0;
 };
 
-class CoopMod {
+class Mod {
 public:
     std::string name = "";
-    std::vector<CoopModFile> files;
+    std::vector<ModFile> files;
     std::string relativePath = "";
     std::string basePath = "";
     bool isDirectory = false;

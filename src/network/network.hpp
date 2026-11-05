@@ -10,10 +10,17 @@
 #include "util.hpp"
 #include "libcoopnet.h"
 
-enum NetworkSystemType {
-    SYS_SOCKET = 0,
-    SYS_COOPNET = 1,
-    SYS_BOTH = 2
+enum class NetworkSystemType {
+    SOCKET = 0,
+    COOPNET = 1,
+    HYBRID = 2
+};
+
+enum class NetworkPlayerType {
+    UNK,
+    LOCAL,
+    SERVER,
+    CLIENT,
 };
 
 struct PlayerPalette {
@@ -22,7 +29,7 @@ struct PlayerPalette {
 
 struct NetworkPlayer {
     bool connected = false;
-    uint8_t type = 0;
+    NetworkPlayerType type = NetworkPlayerType::UNK;
     uint8_t globalIndex = 0;
     uint16_t currLevelAreaSeqId = 0;
     int16_t currCourseNum = 0;
@@ -47,36 +54,26 @@ struct NetworkPlayer {
     static NetworkPlayer *fromPeer(uint64_t peerId);
     static NetworkPlayer *fromLevel(int16_t courseNum, int16_t actNum, int16_t levelNum);
     static NetworkPlayer *fromLevelArea(int16_t courseNum, int16_t actNum, int16_t levelNum, int16_t areaIndex);
+    std::string getNameWithColor(void);
     void clear(void);
 };
-
-enum NetworkPlayerType {
-    NPT_UNKNOWN,
-    NPT_LOCAL,
-    NPT_SERVER,
-    NPT_CLIENT,
-};
-
-extern std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers;
-extern std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds;
-extern void clearNetworkPlayers();
 
 class NetworkSystem {
 public:
     virtual ~NetworkSystem() = default;
 
     virtual bool init(int port) = 0;
-    virtual void shutdown() = 0;
-    virtual void update() = 0;
+    virtual void shutdown(void) = 0;
+    virtual void update(void) = 0;
     virtual void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) = 0;
-    virtual bool requireServerBroadcast() const = 0;
+    virtual bool requireServerBroadcast(void) const = 0;
 
     void sendToPlayer(int globalIndex, const uint8_t *data, size_t len);
     void sendToAll(const uint8_t *data, size_t len, int ignoreIndex = -1);
 protected:
-    void updateReliables();
-    void updatePlayers();
-    void updateNetwork();
+    void updateReliables(void);
+    void updatePlayers(void);
+    void updateNetwork(void);
 };
 
 class SocketNetworkSystem : public NetworkSystem {
@@ -84,10 +81,10 @@ private:
     UDPSocket *udpSock = nullptr;
 public:
     bool init(int port) override;
-    void shutdown() override;
-    void update() override;
+    void shutdown(void) override;
+    void update(void) override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
-    bool requireServerBroadcast() const override { return true; }
+    bool requireServerBroadcast(void) const override { return true; }
 
     void pollSocket();
     UDPSocket *getUdpSocket() { return udpSock; }
@@ -110,17 +107,17 @@ private:
     static void onLoadBalance(const char *host, uint32_t port);
 public:
     bool init(int port) override;
-    void shutdown() override;
-    void update() override;
+    void shutdown(void) override;
+    void update(void) override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
-    bool requireServerBroadcast() const override { return false; }
+    bool requireServerBroadcast(void) const override { return false; }
 
     void pollCoopNet();
 
     void setLocalUserId(uint64_t id) { localUserId = id; }
     void setLocalLobbyId(uint64_t id) { localLobbyId = id; }
-    uint64_t getLocalLobbyId() { return localLobbyId; }
-    uint64_t getLocalUserId() { return localUserId; }
+    uint64_t getLocalLobbyId(void) { return localLobbyId; }
+    uint64_t getLocalUserId(void) { return localUserId; }
 };
 
 class HybridNetworkSystem : public NetworkSystem {
@@ -131,15 +128,16 @@ private:
 public:
     HybridNetworkSystem();
     bool init(int port) override;
-    void shutdown() override;
-    void update() override;
+    void shutdown(void) override;
+    void update(void) override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
-    bool requireServerBroadcast() const override { return true; }
+    bool requireServerBroadcast(void) const override { return true; }
 };
 
+extern std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers;
+extern std::map<uint64_t, uint64_t> gCoopNetIds;
 extern std::unique_ptr<NetworkSystem> gNetworkSystem;
 
-extern std::string getNetworkPlayerName(int globalIndex);
-
+extern void clearNetworkPlayers(void);
 extern bool networkInit(NetworkSystemType type, int port);
-extern void networkShutdown();
+extern void networkShutdown(void);

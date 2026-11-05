@@ -41,7 +41,7 @@ inline bool isValidGlobalIndex(int idx) {
 
 inline std::string getIPString(const sockaddr_in *addr) {
     if (addr == nullptr) return "0.0.0.0:7777";
-    char buffer[INET6_ADDRSTRLEN];
+    char buffer[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &addr->sin_addr, buffer, sizeof(buffer));
     uint16_t port = ntohs(addr->sin_port);
 

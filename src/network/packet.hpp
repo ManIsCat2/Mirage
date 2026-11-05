@@ -17,62 +17,62 @@ constexpr uint8_t PACKET_DESTINATION_SERVER = ((uint8_t)-2);
 constexpr uint8_t MAX_CONFIG_STRING = 64;
 constexpr size_t MAX_CHAT_MSG_LENGTH = 500;
 
-enum PacketType {
-    PACKET_ACK,
-    PACKET_PLAYER,
-    PACKET_OBJECT,
-    PACKET_SPAWN_OBJECTS,
-    PACKET_SPAWN_STAR,
-    PACKET_SPAWN_STAR_NLE,
-    PACKET_COLLECT_STAR,
-    PACKET_COLLECT_COIN,
-    PACKET_COLLECT_ITEM,
-    PACKET_GLOBAL_POPUP,
-    PACKET_DEBUG_SYNC,
-    PACKET_JOIN_REQUEST,
-    PACKET_JOIN,
-    PACKET_CHAT,
-    PACKET_KICK,
-    PACKET_KEEP_ALIVE,
-    PACKET_LEAVING,
-    PACKET_SAVE_FILE,
-    PACKET_SAVE_SET_FLAG,
-    PACKET_SAVE_REMOVE_FLAG,
-    PACKET_NETWORK_PLAYERS,
-    PACKET_DEATH,
-    PACKET_PING,
-    PACKET_PONG,
-    PACKET_UNUSED_23,
-    PACKET_CHANGE_LEVEL,
-    PACKET_CHANGE_AREA,
-    PACKET_LEVEL_AREA_REQUEST,
-    PACKET_LEVEL_REQUEST,
-    PACKET_LEVEL,
-    PACKET_AREA_REQUEST,
-    PACKET_AREA,
-    PACKET_SYNC_VALID,
-    PACKET_LEVEL_SPAWN_INFO,
-    PACKET_LEVEL_MACRO,
-    PACKET_LEVEL_AREA_INFORM,
-    PACKET_LEVEL_RESPAWN_INFO,
-    PACKET_CHANGE_WATER_LEVEL,
-    PACKET_PLAYER_SETTINGS,
-    PACKET_MOD_LIST_REQUEST,
-    PACKET_MOD_LIST,
-    PACKET_DOWNLOAD_REQUEST,
-    PACKET_DOWNLOAD,
-    PACKET_MOD_LIST_ENTRY,
-    PACKET_MOD_LIST_FILE,
-    PACKET_MOD_LIST_DONE,
-    PACKET_LUA_SYNC_TABLE_REQUEST,
-    PACKET_LUA_SYNC_TABLE,
-    PACKET_NETWORK_PLAYERS_REQUEST,
-    PACKET_REQUEST_FAILED,
-    PACKET_LUA_CUSTOM,
-    PACKET_LUA_CUSTOM_BYTESTRING,
-    PACKET_COMMAND,
-    PACKET_MODERATOR,
-    PACKET_CUSTOM = 255,
+enum class PacketType {
+    ACK,
+    PLAYER,
+    OBJECT,
+    SPAWN_OBJECTS,
+    SPAWN_STAR,
+    SPAWN_STAR_NLE,
+    COLLECT_STAR,
+    COLLECT_COIN,
+    COLLECT_ITEM,
+    GLOBAL_POPUP,
+    DEBUG_SYNC,
+    JOIN_REQUEST,
+    JOIN,
+    CHAT,
+    KICK,
+    KEEP_ALIVE,
+    LEAVING,
+    SAVE_FILE,
+    SAVE_SET_FLAG,
+    SAVE_REMOVE_FLAG,
+    NETWORK_PLAYERS,
+    DEATH,
+    PING,
+    PONG,
+    UNUSED_23,
+    CHANGE_LEVEL,
+    CHANGE_AREA,
+    LEVEL_AREA_REQUEST,
+    LEVEL_REQUEST,
+    LEVEL,
+    AREA_REQUEST,
+    AREA,
+    SYNC_VALID,
+    LEVEL_SPAWN_INFO,
+    LEVEL_MACRO,
+    LEVEL_AREA_INFORM,
+    LEVEL_RESPAWN_INFO,
+    CHANGE_WATER_LEVEL,
+    PLAYER_SETTINGS,
+    MOD_LIST_REQUEST,
+    MOD_LIST,
+    DOWNLOAD_REQUEST,
+    DOWNLOAD,
+    MOD_LIST_ENTRY,
+    MOD_LIST_FILE,
+    MOD_LIST_DONE,
+    LUA_SYNC_TABLE_REQUEST,
+    LUA_SYNC_TABLE,
+    NETWORK_PLAYERS_REQUEST,
+    REQUEST_FAILED,
+    LUA_CUSTOM,
+    LUA_CUSTOM_BYTESTRING,
+    COMMAND,
+    MODERATOR,
+    CUSTOM = 255,
 };
 
 enum PacketLevelMatchType {
@@ -81,20 +81,20 @@ enum PacketLevelMatchType {
     PLMT_LEVEL
 };
 
-class CoopPacket {
+class Packet {
 private:
     Endpoint sender;
     std::vector<uint8_t> data;
     size_t offset = 3;
 
-    CoopPacket(uint8_t pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex);
+    Packet(PacketType pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex);
 
-    std::vector<uint8_t> compress();
-    void execute();
-    void processOrdered();
-    void setOrderedData();
+    std::vector<uint8_t> compress(void);
+    void execute(void);
+    void processOrdered(void);
+    void setOrderedData(void);
 public:
-    uint8_t pktType = 0;
+    PacketType type = PacketType::PLAYER;
     uint16_t seqId = 0;
     bool isReliable = false;
     uint8_t flags = 0;
@@ -113,10 +113,10 @@ public:
     int16_t levelNum = 0;
     uint8_t areaIndex = 0;
 
-    CoopPacket(const Endpoint &from, const uint8_t *compData, size_t compLen);
-    static CoopPacket createOutgoing(uint8_t pType, bool reliable = false, uint8_t levelMatchType = PLMT_NONE, int asGlobalIndex = 0);
+    Packet(const Endpoint &from, const uint8_t *compData, size_t compLen);
+    static Packet createOutgoing(PacketType pType, bool reliable = false, uint8_t levelMatchType = PLMT_NONE, int asGlobalIndex = 0);
 
-    CoopPacket duplicate();
+    Packet duplicate(void);
 
     template<typename T>
     T read(size_t length = 0) {
@@ -162,9 +162,9 @@ public:
     std::string getSenderIdentifier(void);
     void sendTo(const Endpoint &dest);
     void sendTo(int globalIdx);
-    void sendToAll();
+    void sendToAll(void);
     void sendToAllExcept(const Endpoint &skip);
-    void handle();
+    void handle(void);
 };
 
 struct ReliablePacket {
@@ -177,10 +177,10 @@ struct ReliablePacket {
 
 struct OrderedState {
     uint16_t processSeqId = 1;
-    std::map<uint16_t, CoopPacket> queuedPackets;
+    std::map<uint16_t, Packet> queuedPackets;
 };
 
 extern std::list<ReliablePacket> gReliablePackets;
 
-extern void packetOrderedBegin();
-extern void packetOrderedEnd();
+extern void packetOrderedBegin(void);
+extern void packetOrderedEnd(void);

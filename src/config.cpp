@@ -23,25 +23,25 @@ static std::vector<T> readArray(const json &data, const char *key) {
     return result;
 }
 
-static bool isValidNetworkSystem(int id) {
-    return id == SYS_SOCKET || id == SYS_COOPNET || id == SYS_BOTH;
+static bool isValidNetworkSystem(NetworkSystemType id) {
+    return id == NetworkSystemType::SOCKET || id == NetworkSystemType::COOPNET || id == NetworkSystemType::HYBRID;
 }
 
-static int parseNetworkSystem(const json &value) {
+static NetworkSystemType parseNetworkSystem(const json &value) {
     if (value.is_number_integer()) {
-        int id = value.get<int>();
+        NetworkSystemType id = static_cast<NetworkSystemType>(value.get<int>());
         if (isValidNetworkSystem(id)) {
             return id;
         }
     } else if (value.is_string()) {
         std::string text = stringToLower(value.get<std::string>());
 
-        if (text == "socket") return SYS_SOCKET;
-        if (text == "coopnet") return SYS_COOPNET;
-        if (text == "hybrid" || text == "both") return SYS_BOTH;
+        if (text == "socket") return NetworkSystemType::SOCKET;
+        if (text == "coopnet") return NetworkSystemType::COOPNET;
+        if (text == "hybrid" || text == "both") return NetworkSystemType::HYBRID;
 
         if (!text.empty() && std::all_of(text.begin(), text.end(), isdigit)) {
-            int id = std::stoi(text);
+            NetworkSystemType id = static_cast<NetworkSystemType>(std::stoi(text));
             if (isValidNetworkSystem(id)) {
                 return id;
             }
@@ -49,13 +49,13 @@ static int parseNetworkSystem(const json &value) {
     }
 
     Logging::warn("CONFIG", "unknown network system {}, defaulting to socket", value.dump());
-    return SYS_SOCKET;
+    return NetworkSystemType::SOCKET;
 }
 
-static std::string networkSystemName(int id) {
+static std::string networkSystemName(NetworkSystemType id) {
     switch (id) {
-        case SYS_COOPNET: return "coopnet";
-        case SYS_BOTH:    return "hybrid";
+        case NetworkSystemType::COOPNET: return "coopnet";
+        case NetworkSystemType::HYBRID:    return "hybrid";
         default:          return "socket";
     }
 }
@@ -96,14 +96,12 @@ void ServerConfig::read(const std::string &filename) {
     nametags = data.value("nametags", nametags);
     maxPlayers = data.value("maxPlayers", maxPlayers);
 
-    gui = data.value("gui", gui);
-
     whitelist = readArray<int64_t>(data, "whitelist");
     blacklist = readArray<int64_t>(data, "blacklist");
 
     mods.clear();
     for (const auto &entry : readArray<std::string>(data, "mods")) {
-        CoopMod mod;
+        Mod mod;
         if (mod.load(entry)) {
             Logging::info("CONFIG", "loaded mod {}", mod.name);
             mods.push_back(mod);
@@ -141,7 +139,6 @@ void ServerConfig::write(const std::string &filename) {
         {"mods", modPaths},
         {"whitelist", whitelist},
         {"blacklist", blacklist},
-        {"gui", gui},
     };
 
     std::ofstream file(filename);

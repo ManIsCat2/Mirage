@@ -6,7 +6,7 @@
 
 namespace fs = std::filesystem;
 
-static void loadModFiles(CoopMod &mod, const fs::path &basePath, const std::string &subDir, const std::vector<std::string> &exts, bool recursive) {
+static void loadModFiles(Mod &mod, const fs::path &basePath, const std::string &subDir, const std::vector<std::string> &exts, bool recursive) {
     fs::path searchPath = basePath / subDir;
     if (!fs::exists(searchPath) || !fs::is_directory(searchPath)) return;
 
@@ -15,7 +15,7 @@ static void loadModFiles(CoopMod &mod, const fs::path &basePath, const std::stri
         std::string ext = path.extension().string();
         if (std::find(exts.begin(), exts.end(), ext) == exts.end()) return;
 
-        CoopModFile modFile;
+        ModFile modFile;
         modFile.realPath = path.string();
         
         modFile.relativePath = fs::relative(path, basePath).string();
@@ -37,7 +37,7 @@ static void loadModFiles(CoopMod &mod, const fs::path &basePath, const std::stri
     }
 }
 
-void CoopMod::extractFields(const std::string &mainFilePath) {
+void Mod::extractFields(const std::string &mainFilePath) {
     std::ifstream file(mainFilePath, std::ios::binary);
     if (!file.is_open()) return;
 
@@ -59,7 +59,7 @@ void CoopMod::extractFields(const std::string &mainFilePath) {
     }
 }
 
-bool CoopMod::load(const std::string &modPath) {
+bool Mod::load(const std::string &modPath) {
     size_t lastDot = modPath.rfind('.');
     size_t lastSlash = modPath.rfind('/');
 
@@ -87,7 +87,7 @@ bool CoopMod::load(const std::string &modPath) {
         loadModFiles(*this, base, "levels", {".lvl"}, false);
         loadModFiles(*this, base, "sound", {".m64", ".mp3", ".aiff", ".ogg"}, true);
     } else {
-        CoopModFile modFile;
+        ModFile modFile;
         modFile.realPath = mainPath;
         modFile.relativePath = name = fs::path(mainPath).filename().string();
         modFile.size = fs::file_size(mainPath);
@@ -97,7 +97,7 @@ bool CoopMod::load(const std::string &modPath) {
     
     extractFields(mainPath);
     
-    std::sort(files.begin(), files.end(), [](const CoopModFile &a, const CoopModFile &b) {
+    std::sort(files.begin(), files.end(), [](const ModFile &a, const ModFile &b) {
         return a.relativePath < b.relativePath;
     });
 

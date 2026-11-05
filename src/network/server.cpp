@@ -9,7 +9,7 @@ std::atomic<bool> gServerRunning{true};
 
 Server::Server(int p) : port(p) {}
 
-void Server::run() {
+void Server::run(void) {
     if (!networkInit((NetworkSystemType)gServerConfig.networkSystem, port)) {
         Logging::error("SERVER", "failed to initialize network system");
         return;

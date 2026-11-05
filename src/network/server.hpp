@@ -7,7 +7,7 @@ private:
     int port;
 public:
     Server(int p);
-    void run();
+    void run(void);
     int getPort() const { return port; }
 };
 

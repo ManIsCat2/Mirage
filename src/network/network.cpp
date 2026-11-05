@@ -12,14 +12,14 @@ constexpr double NETWORK_PLAYER_PING_TIMEOUT = 3.0;
 constexpr double NETWORK_PLAYER_TIMEOUT = 15.0;
 
 std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
-std::map<uint64_t, uint64_t> gNetworkPlayerCoopNetIds{};
+std::map<uint64_t, uint64_t> gCoopNetIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
 
 static CoopNetNetworkSystem *gCoopNet = nullptr;
 
 void NetworkPlayer::clear(void) {
     connected = false;
-    type = 0;
+    type = NetworkPlayerType::UNK;
     globalIndex = 0;
     currLevelAreaSeqId = 0;
     currCourseNum = 0;
@@ -38,7 +38,7 @@ void NetworkPlayer::clear(void) {
     name.clear();
     discordId.clear();
 
-    if (endpoint.isPeer()) gNetworkPlayerCoopNetIds.erase(endpoint.peerId);
+    if (endpoint.isPeer()) gCoopNetIds.erase(endpoint.peerId);
 }
 
 NetworkPlayer *NetworkPlayer::fromAddr(const sockaddr_in &a) {
@@ -88,24 +88,24 @@ NetworkPlayer *NetworkPlayer::fromLevelArea(int16_t courseNum, int16_t actNum, i
     return nullptr;
 }
 
-std::string getNetworkPlayerName(int globalIndex) {
-    return gNetworkPlayers[globalIndex].name + "\\#reset\\";
+std::string NetworkPlayer::getNameWithColor(void) {
+    return name + "\\#reset\\";
 }
 
-void clearNetworkPlayers() {
+void clearNetworkPlayers(void) {
     for (int i = 1; i < MAX_PLAYERS; i++) {
         NetworkPlayer *np = &gNetworkPlayers[i];
         np->clear();
     }
-    gNetworkPlayerCoopNetIds.clear();
+    gCoopNetIds.clear();
 }
 
-static void clearCoopNetPlayers() {
+static void clearCoopNetPlayers(void) {
     for (int i = 1; i < MAX_PLAYERS; i++) {
         NetworkPlayer *np = &gNetworkPlayers[i];
         if (np->endpoint.isPeer()) np->clear();
     }
-    gNetworkPlayerCoopNetIds.clear();
+    gCoopNetIds.clear();
 }
 
 void NetworkSystem::sendToPlayer(int globalIndex, const uint8_t *data, size_t len) {
@@ -121,7 +121,7 @@ void NetworkSystem::sendToAll(const uint8_t *data, size_t len, int ignoreIndex) 
     }
 }
 
-void NetworkSystem::updateReliables() {
+void NetworkSystem::updateReliables(void) {
     auto now = std::chrono::steady_clock::now();
     auto it = gReliablePackets.begin();
 
@@ -145,16 +145,16 @@ void NetworkSystem::updateReliables() {
     }
 }
 
-void NetworkSystem::updatePlayers() {
+void NetworkSystem::updatePlayers(void) {
     double now = clockElapsed();
-    bool canTimeOut = (gServerConfig.networkSystem != SYS_SOCKET);
+    bool canTimeOut = (gServerConfig.networkSystem != NetworkSystemType::SOCKET);
 
     for (int i = 1; i < MAX_PLAYERS; i++) {
         NetworkPlayer *np = &gNetworkPlayers[i];
         if (!np->connected) { continue; }
 
         if (now - np->lastPingSent > NETWORK_PLAYER_PING_TIMEOUT) {
-            auto pkt = CoopPacket::createOutgoing(PACKET_PING, false);
+            auto pkt = Packet::createOutgoing(PacketType::PING, false);
             pkt.write<uint8_t>(np->globalIndex);
             pkt.write<double>(now);
             pkt.sendTo(np->globalIndex);
@@ -171,7 +171,7 @@ void NetworkSystem::updatePlayers() {
             uint8_t globalIndex = gNetworkPlayers[i].globalIndex;
             Endpoint &ep = gNetworkPlayers[i].endpoint;
 
-            auto leaving = CoopPacket::createOutgoing(PACKET_LEAVING, true);
+            auto leaving = Packet::createOutgoing(PacketType::LEAVING, true);
             leaving.write<uint8_t>(globalIndex);
             leaving.sendToAllExcept(ep);
 
@@ -181,13 +181,13 @@ void NetworkSystem::updatePlayers() {
         }
 
         if (now - np->lastSent > NETWORK_PLAYER_TIMEOUT / 3.0) {
-            auto pkt = CoopPacket::createOutgoing(PACKET_KEEP_ALIVE, false);
+            auto pkt = Packet::createOutgoing(PacketType::KEEP_ALIVE, false);
             pkt.sendTo(np->globalIndex);
         }
     }
 }
 
-void NetworkSystem::updateNetwork() {
+void NetworkSystem::updateNetwork(void) {
     updateReliables();
     updatePlayers();
 }
@@ -198,7 +198,7 @@ bool SocketNetworkSystem::init(int port) {
     return true;
 }
 
-void SocketNetworkSystem::shutdown() {
+void SocketNetworkSystem::shutdown(void) {
     if (udpSock) {
         delete udpSock;
         udpSock = nullptr;
@@ -213,12 +213,12 @@ void SocketNetworkSystem::pollSocket() {
         std::memset(&clientAddr, 0, sizeof(clientAddr));
         ssize_t received = udpSock->receive(buffer, sizeof(buffer), clientAddr);
         if (received <= 0) break;
-        CoopPacket pkt(Endpoint::fromSocket(udpSock->getSock(), clientAddr), buffer, received);
+        Packet pkt(Endpoint::fromSocket(udpSock->getSock(), clientAddr), buffer, received);
         pkt.handle();
     }
 }
 
-void SocketNetworkSystem::update() {
+void SocketNetworkSystem::update(void) {
     pollSocket();
     updateNetwork();
 }
@@ -239,13 +239,13 @@ void CoopNetNetworkSystem::onDisconnected(bool intentional) {
 }
 
 void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint64_t dataLength) {
-    CoopPacket pkt(Endpoint::fromPeer(userId), data, dataLength);
+    Packet pkt(Endpoint::fromPeer(userId), data, dataLength);
     pkt.handle();
 }
 
 void CoopNetNetworkSystem::onLobbyJoined(uint64_t lobbyId, uint64_t userId, uint64_t ownerId, uint64_t destId) {
     Logging::info("NETWORK", "joined lobby id {} with dest {}", lobbyId, destId);
-    gNetworkPlayerCoopNetIds[userId] = destId;
+    gCoopNetIds[userId] = destId;
     if (gCoopNet) gCoopNet->setLocalLobbyId(lobbyId);
 }
 
@@ -272,7 +272,7 @@ void CoopNetNetworkSystem::onPeerDisconnect(uint64_t peerId) {
     if (np) {
         uint8_t idx = np->globalIndex;
         Logging::info("NETWORK", "player {} disconnected via coopnet peer drop", np->name);
-        auto leaving = CoopPacket::createOutgoing(PACKET_LEAVING, true);
+        auto leaving = Packet::createOutgoing(PacketType::LEAVING, true);
         leaving.write<uint8_t>(idx);
         leaving.sendToAll();
         gNetworkPlayers[idx].clear();
@@ -307,7 +307,7 @@ bool CoopNetNetworkSystem::init(int port) {
     return false;
 }
 
-void CoopNetNetworkSystem::shutdown() {
+void CoopNetNetworkSystem::shutdown(void) {
     coopnet_shutdown();
     gCoopNet = nullptr;
 }
@@ -323,7 +323,7 @@ void CoopNetNetworkSystem::pollCoopNet() {
     }
 }
 
-void CoopNetNetworkSystem::update() {
+void CoopNetNetworkSystem::update(void) {
     pollCoopNet();
     updateNetwork();
     std::this_thread::sleep_for(std::chrono::milliseconds(33));
@@ -347,7 +347,7 @@ bool HybridNetworkSystem::init(int port) {
     return true;
 }
 
-void HybridNetworkSystem::shutdown() {
+void HybridNetworkSystem::shutdown(void) {
     if (coopEnabled) {
         coopSys->shutdown();
         coopEnabled = false;
@@ -355,7 +355,7 @@ void HybridNetworkSystem::shutdown() {
     socketSys->shutdown();
 }
 
-void HybridNetworkSystem::update() {
+void HybridNetworkSystem::update(void) {
     socketSys->pollSocket();
     if (coopEnabled) coopSys->pollCoopNet();
     updateNetwork();
@@ -371,11 +371,11 @@ void HybridNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size
 }
 
 bool networkInit(NetworkSystemType type, int port) {
-    if (type == SYS_SOCKET) {
+    if (type == NetworkSystemType::SOCKET) {
         gNetworkSystem = std::make_unique<SocketNetworkSystem>();
-    } else if (type == SYS_COOPNET) {
+    } else if (type == NetworkSystemType::COOPNET) {
         gNetworkSystem = std::make_unique<CoopNetNetworkSystem>();
-    } else if (type == SYS_BOTH) {
+    } else if (type == NetworkSystemType::HYBRID) {
         gNetworkSystem = std::make_unique<HybridNetworkSystem>();
     } else {
         return false;
@@ -384,7 +384,7 @@ bool networkInit(NetworkSystemType type, int port) {
     return gNetworkSystem->init(port);
 }
 
-void networkShutdown() {
+void networkShutdown(void) {
     if (gNetworkSystem) {
         Logging::info("SERVER", "shutting down");
         gNetworkSystem->shutdown();

@@ -28,12 +28,12 @@ NetworkPlayer *Endpoint::getPlayer() {
 bool Endpoint::isAllowed(void) const {
     if (isPeer()) {
         if (gServerConfig.whitelist.size() > 0) {
-            if (std::find(gServerConfig.whitelist.begin(), gServerConfig.whitelist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.whitelist.end()) {
+            if (std::find(gServerConfig.whitelist.begin(), gServerConfig.whitelist.end(), gCoopNetIds[peerId]) != gServerConfig.whitelist.end()) {
             } else {
                 return false;
             }
         }
-        if (std::find(gServerConfig.blacklist.begin(), gServerConfig.blacklist.end(), gNetworkPlayerCoopNetIds[peerId]) != gServerConfig.blacklist.end()) {
+        if (std::find(gServerConfig.blacklist.begin(), gServerConfig.blacklist.end(), gCoopNetIds[peerId]) != gServerConfig.blacklist.end()) {
             return false;
         }
     }
