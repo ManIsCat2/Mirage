@@ -75,10 +75,10 @@ enum class PacketType {
     CUSTOM = 255,
 };
 
-enum PacketLevelMatchType {
-    PLMT_NONE,
-    PLMT_AREA,
-    PLMT_LEVEL
+enum class PacketLevelMatchType {
+    NONE,
+    AREA,
+    LEVEL
 };
 
 class Packet {
@@ -87,7 +87,7 @@ private:
     std::vector<uint8_t> data;
     size_t offset = 3;
 
-    Packet(PacketType pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex);
+    Packet(PacketType pType, bool reliable, PacketLevelMatchType levelMatchType, int asGlobalIndex);
 
     std::vector<uint8_t> compress(void);
     void execute(void);
@@ -114,7 +114,7 @@ public:
     uint8_t areaIndex = 0;
 
     Packet(const Endpoint &from, const uint8_t *compData, size_t compLen);
-    static Packet createOutgoing(PacketType pType, bool reliable = false, uint8_t levelMatchType = PLMT_NONE, int asGlobalIndex = 0);
+    static Packet createOutgoing(PacketType pType, bool reliable = false, PacketLevelMatchType levelMatchType = PacketLevelMatchType::NONE, int asGlobalIndex = 0);
 
     Packet duplicate(void);
 

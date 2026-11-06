@@ -144,12 +144,12 @@ Packet::Packet(const Endpoint &from, const uint8_t *compData, size_t compLen) : 
     }
 }
 
-Packet::Packet(PacketType pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex) : type(pType), isReliable(reliable) {
+Packet::Packet(PacketType pType, bool reliable, PacketLevelMatchType levelMatchType, int asGlobalIndex) : type(pType), isReliable(reliable) {
     data.reserve(256);
 
     uint8_t initFlags = 0;
-    if (levelMatchType == PLMT_AREA) initFlags |= (1 << 0);
-    if (levelMatchType == PLMT_LEVEL) initFlags |= (1 << 3);
+    if (levelMatchType == PacketLevelMatchType::AREA) initFlags |= (1 << 0);
+    if (levelMatchType == PacketLevelMatchType::LEVEL) initFlags |= (1 << 3);
     if (sOrderedPackets) initFlags |= (1 << 2);
 
     if (reliable) {
@@ -172,12 +172,12 @@ Packet::Packet(PacketType pType, bool reliable, uint8_t levelMatchType, int asGl
         write<uint16_t>(0);
     }
 
-    if (levelMatchType == PLMT_AREA) {
+    if (levelMatchType == PacketLevelMatchType::AREA) {
         write<uint8_t>(localNp->currCourseNum);
         write<uint8_t>(localNp->currActNum);
         write<int16_t>(localNp->currLevelNum);
         write<uint8_t>(localNp->currAreaIndex);
-    } else if (levelMatchType == PLMT_LEVEL) {
+    } else if (levelMatchType == PacketLevelMatchType::LEVEL) {
         write<uint8_t>(localNp->currCourseNum);
         write<uint8_t>(localNp->currActNum);
         write<int16_t>(localNp->currLevelNum);
@@ -202,7 +202,7 @@ void packetOrderedEnd(void) {
     sCurrentOrderedSeqId = 0;
 }
 
-Packet Packet::createOutgoing(PacketType pType, bool reliable, uint8_t levelMatchType, int asGlobalIndex) {
+Packet Packet::createOutgoing(PacketType pType, bool reliable, PacketLevelMatchType levelMatchType, int asGlobalIndex) {
     return Packet(pType, reliable, levelMatchType, asGlobalIndex);
 }
 
