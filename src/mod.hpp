@@ -19,6 +19,7 @@ public:
     bool isDirectory = false;
     bool pausable = true;
     bool ignoreScriptWarnings = false;
+    bool execute = false;
     size_t size = 0;
     
     bool load(const std::string &modPath);

@@ -65,6 +65,7 @@ public:
     virtual bool init(int port) = 0;
     virtual void shutdown(void) = 0;
     virtual void update(void) = 0;
+    virtual void poll(void) = 0;
     virtual void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) = 0;
     virtual bool requireServerBroadcast(void) const = 0;
 
@@ -83,10 +84,10 @@ public:
     bool init(int port) override;
     void shutdown(void) override;
     void update(void) override;
+    void poll(void) override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast(void) const override { return true; }
 
-    void pollSocket();
     UDPSocket *getUdpSocket() { return udpSock; }
 };
 
@@ -109,27 +110,21 @@ public:
     bool init(int port) override;
     void shutdown(void) override;
     void update(void) override;
+    void poll(void) override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast(void) const override { return false; }
-
-    void pollCoopNet();
-
-    void setLocalUserId(uint64_t id) { localUserId = id; }
-    void setLocalLobbyId(uint64_t id) { localLobbyId = id; }
-    uint64_t getLocalLobbyId(void) { return localLobbyId; }
-    uint64_t getLocalUserId(void) { return localUserId; }
 };
 
 class HybridNetworkSystem : public NetworkSystem {
 private:
     std::unique_ptr<SocketNetworkSystem> socketSys;
     std::unique_ptr<CoopNetNetworkSystem> coopSys;
-    bool coopEnabled = false;
 public:
     HybridNetworkSystem();
     bool init(int port) override;
     void shutdown(void) override;
     void update(void) override;
+    void poll() override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast(void) const override { return true; }
 };

@@ -264,9 +264,9 @@ std::vector<uint8_t> Packet::compress(void) {
 
 std::string Packet::getSenderIdentifier(void) {
     NetworkPlayer *senderNp = sender.getPlayer();
+    const std::string &ipv4 = getIPString(&sender.addr);
+    const std::string &coopnetId = std::to_string(gCoopNetIds[sender.peerId]);
     std::string ident;
-    std::string ipv4 = getIPString(&sender.addr);
-    std::string coopnetId = std::to_string(gCoopNetIds[sender.peerId]);
 
     if (gServerConfig.networkSystem == NetworkSystemType::SOCKET) {
         ident = ipv4;
@@ -421,8 +421,8 @@ void Packet::processOrdered() {
 
 void Packet::execute() {
     NetworkPlayer *senderNp = sender.getPlayer();
-    uint8_t senderGlobalIndex = senderNp ? senderNp->globalIndex : 0;
-    std::string senderIdentifier = getSenderIdentifier();
+    const uint8_t senderGlobalIndex = senderNp ? senderNp->globalIndex : 0;
+    const std::string &senderIdentifier = getSenderIdentifier();
 
     switch (type) {
         case PacketType::ACK: {

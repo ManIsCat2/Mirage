@@ -15,8 +15,6 @@ std::array<NetworkPlayer, MAX_PLAYERS> gNetworkPlayers{};
 std::map<uint64_t, uint64_t> gCoopNetIds{};
 std::unique_ptr<NetworkSystem> gNetworkSystem = nullptr;
 
-static CoopNetNetworkSystem *gCoopNet = nullptr;
-
 void NetworkPlayer::clear(void) {
     connected = false;
     type = NetworkPlayerType::UNK;
@@ -205,7 +203,7 @@ void SocketNetworkSystem::shutdown(void) {
     }
 }
 
-void SocketNetworkSystem::pollSocket() {
+void SocketNetworkSystem::poll(void) {
     if (!udpSock) return;
     uint8_t buffer[PACKET_LENGTH];
     for (int i = 0; i < MAX_SOCKET_RECV_PER_TICK; i++) {
@@ -219,7 +217,7 @@ void SocketNetworkSystem::pollSocket() {
 }
 
 void SocketNetworkSystem::update(void) {
-    pollSocket();
+    poll();
     updateNetwork();
 }
 
@@ -230,7 +228,7 @@ void SocketNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size
 
 void CoopNetNetworkSystem::onConnected(uint64_t userId) {
     Logging::info("NETWORK", "connected to coopnet as user {}", userId);
-    if (gCoopNet) gCoopNet->setLocalUserId(userId);
+    gNetworkPlayers[0].endpoint = Endpoint::fromPeer(userId);
 }
 
 void CoopNetNetworkSystem::onDisconnected(bool intentional) {
@@ -246,16 +244,10 @@ void CoopNetNetworkSystem::onReceive(uint64_t userId, const uint8_t *data, uint6
 void CoopNetNetworkSystem::onLobbyJoined(uint64_t lobbyId, uint64_t userId, uint64_t ownerId, uint64_t destId) {
     Logging::info("NETWORK", "joined lobby id {} with dest {}", lobbyId, destId);
     gCoopNetIds[userId] = destId;
-    if (gCoopNet) gCoopNet->setLocalLobbyId(lobbyId);
 }
 
 void CoopNetNetworkSystem::onLobbyLeft(uint64_t lobbyId, uint64_t userId) {
     Logging::info("NETWORK", "user {} left lobby {}", userId, lobbyId);
-    //if (gCoopNet) {
-    //    if (lobbyId == gCoopNet->getLocalLobbyId() && userId == gCoopNet->getLocalUserId()) {
-    //        gCoopNet->setLocalLobbyId(0);
-    //    }
-    //}
 }
 
 void CoopNetNetworkSystem::onError(enum MPacketErrorNumber error, uint64_t tag) {
@@ -295,24 +287,21 @@ bool CoopNetNetworkSystem::init(int port) {
     gCoopNetCallbacks.OnPeerDisconnected = CoopNetNetworkSystem::onPeerDisconnect;
     gCoopNetCallbacks.OnLoadBalance = CoopNetNetworkSystem::onLoadBalance;
 
-    gCoopNet = this;
     CoopNetRc rc = coopnet_begin("net.coop64.us", 34197, gServerConfig.name.c_str(), 0);
     if (rc == COOPNET_OK) {
         Logging::info("NETWORK", "initialized coopnet");
         needsLobbyCreate = true;
         return true;
     }
-    gCoopNet = nullptr;
     Logging::error("NETWORK", "failed to initialize coopnet");
     return false;
 }
 
 void CoopNetNetworkSystem::shutdown(void) {
     coopnet_shutdown();
-    gCoopNet = nullptr;
 }
 
-void CoopNetNetworkSystem::pollCoopNet() {
+void CoopNetNetworkSystem::poll(void) {
     coopnet_update();
     if (needsLobbyCreate && localUserId != 0) {
         needsLobbyCreate = false;
@@ -324,7 +313,7 @@ void CoopNetNetworkSystem::pollCoopNet() {
 }
 
 void CoopNetNetworkSystem::update(void) {
-    pollCoopNet();
+    poll();
     updateNetwork();
     std::this_thread::sleep_for(std::chrono::milliseconds(33));
 }
@@ -340,24 +329,24 @@ bool HybridNetworkSystem::init(int port) {
         return false;
     }
 
-    coopEnabled = coopSys->init(port);
-    if (!coopEnabled) {
+    if (!coopSys->init(port)) {
         return false;
     }
     return true;
 }
 
 void HybridNetworkSystem::shutdown(void) {
-    if (coopEnabled) {
-        coopSys->shutdown();
-        coopEnabled = false;
-    }
+    coopSys->shutdown();
     socketSys->shutdown();
 }
 
+void HybridNetworkSystem::poll(void) {
+    socketSys->poll();
+    coopSys->poll();
+}
+
 void HybridNetworkSystem::update(void) {
-    socketSys->pollSocket();
-    if (coopEnabled) coopSys->pollCoopNet();
+    poll();
     updateNetwork();
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }

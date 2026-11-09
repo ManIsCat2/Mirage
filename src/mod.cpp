@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "mod.hpp"
 #include "config.hpp"
+#include "lua/smlua.hpp"
 
 namespace fs = std::filesystem;
 
@@ -55,6 +56,7 @@ void Mod::extractFields(const std::string &mainFilePath) {
             if (key == "name") name = value;
             else if (key == "pausable") pausable = (value == "true");
             else if (key == "ignore-script-warnings") ignoreScriptWarnings = (value == "true");
+            else if (key == "mirage") execute = (value == "true");
         }
     }
 }
@@ -100,6 +102,10 @@ bool Mod::load(const std::string &modPath) {
     std::sort(files.begin(), files.end(), [](const ModFile &a, const ModFile &b) {
         return a.relativePath < b.relativePath;
     });
+
+    if (execute) {
+        gSMLua.executeMod(*this);
+    }
 
     return true;
 }
