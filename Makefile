@@ -3,8 +3,8 @@ TARGET := Mirage
 BUILD_DIR := build
 CXX := clang++
 ASAN := 0
-CXXFLAGS := -O3 -Iinclude -std=c++23 -MMD -MP
-LDFLAGS := -lz -llua
+CXXFLAGS := -O3 -Iinclude $(shell pkg-config --cflags lua5.4) -std=c++23 -MMD -MP
+LDFLAGS := -lz $(shell pkg-config --libs lua5.4)
 
 WINDOWS_BUILD := 0
 LINUX_BUILD := 0
