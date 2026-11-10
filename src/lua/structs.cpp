@@ -11,8 +11,9 @@ static std::unordered_map<std::string, GlobalBinding> &luaBindings() {
 static int globalIndex(lua_State *L) {
     const char *key = lua_tostring(L, 2);
     if (!key) return 0;
-    auto it = luaBindings().find(key);
-    if (it == luaBindings().end()) return 0;
+    auto &table = luaBindings();
+    auto it = table.find(key);
+    if (it == table.end()) return 0;
     it->second.push(L);
     return 1;
 }
@@ -20,8 +21,9 @@ static int globalIndex(lua_State *L) {
 static int globalNewIndex(lua_State *L) {
     const char *key = lua_tostring(L, 2);
     if (key) {
-        auto it = luaBindings().find(key);
-        if (it != luaBindings().end()) {
+        auto &table = luaBindings();
+        auto it = table.find(key);
+        if (it != table.end()) {
             it->second.assign(L, 3);
             return 0;
         }
@@ -41,9 +43,9 @@ bool isGlobalBound(const char *name) {
 void initLuaGlobalBindings(lua_State *L) {
     lua_pushglobaltable(L);
     lua_newtable(L);
-    lua_pushcfunction(L, globalIndex);
+    lua_pushcclosure(L, globalIndex, 0);
     lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, globalNewIndex);
+    lua_pushcclosure(L, globalNewIndex, 0);
     lua_setfield(L, -2, "__newindex");
     lua_setmetatable(L, -2);
     lua_pop(L, 1);

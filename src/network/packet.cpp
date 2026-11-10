@@ -2,6 +2,7 @@
 #include "network.hpp"
 #include "../config.hpp"
 #include "../savefile.hpp"
+#include "../lua/smlua.hpp"
 #include "log.hpp"
 #include "util.hpp"
 #include <algorithm>
@@ -17,6 +18,47 @@ static bool sOrderedPackets = false;
 static uint16_t sCurrentOrderedGroupId = 0;
 static uint16_t sCurrentOrderedSeqId = 0;
 static uint16_t sNextSeqNum = 1;
+
+static std::optional<LSTNetworkValue> readLNT(Packet &p) {
+    LSTNetworkValue lnt;
+    lnt.type = static_cast<LSTNetworkType>(p.read<uint8_t>());
+
+    switch (lnt.type) {
+        case LSTNetworkType::NUMBER:
+            lnt.value = p.read<double>();
+            return lnt;
+
+        case LSTNetworkType::INTEGER:
+            lnt.value = p.read<int64_t>();
+            return lnt;
+
+        case LSTNetworkType::BOOLEAN:
+            lnt.value = p.read<uint8_t>() != 0;
+            return lnt;
+
+        case LSTNetworkType::STRING: {
+            uint16_t valueLength = p.read<uint16_t>();
+            if (valueLength < 1 || valueLength > 256) {
+                Logging::error("SERVER", "Received lua variable with invalid value length: {}", valueLength);
+                return std::nullopt;
+            }
+            if (p.remaining() < valueLength) {
+                Logging::error("SERVER", "Received lua string longer than packet");
+                return std::nullopt;
+            }
+            lnt.value = p.read<std::string>(valueLength);
+            return lnt;
+        }
+
+        case LSTNetworkType::NIL:
+            lnt.value = std::monostate{};
+            return lnt;
+
+        default:
+            Logging::error("SERVER", "Received lua variable with invalid type: {}", static_cast<int>(lnt.type));
+            return std::nullopt;
+    }
+}
 
 static void sendSyncValid(const Endpoint &to, NetworkPlayer *np, int16_t course, int16_t act, int16_t level, int16_t area) {
     auto outPkt = Packet::createOutgoing(PacketType::SYNC_VALID, true);
@@ -671,6 +713,13 @@ void Packet::execute() {
             np->lastSent = clockElapsed();
             np->lastPingSent = 0.0;
 
+            gSMLua.callHook(HookEventType::ON_PLAYER_CONNECTED, [&](lua_State *L) {
+                lua_createtable(L, 0, 1);
+                lua_pushinteger(L, globalIndex);
+                lua_setfield(L, -2, "playerIndex");
+                return 1;
+            });
+
             auto broadcastPkt = Packet::createOutgoing(PacketType::NETWORK_PLAYERS, true);
             broadcastPkt.write<uint8_t>(1);
             broadcastPkt.write<uint8_t>(static_cast<uint8_t>(np->type));
@@ -898,6 +947,64 @@ void Packet::execute() {
 
             Logging::info("SERVER", "player '{}' (globalindex {}) disconnected", senderName, globalIndex);
             gNetworkPlayers[globalIndex].clear();
+            break;
+        }
+        case PacketType::LUA_CUSTOM: {
+            uint16_t modIndex = read<uint16_t>();
+            uint8_t keyCount = read<uint8_t>();
+
+            Logging::info("SERVER", "[{}] PACKET_LUA_CUSTOM received: modIndex {}, keyCount {}", senderIdentifier, modIndex, keyCount);
+
+            std::vector<std::pair<LSTNetworkValue, LSTNetworkValue>> entries;
+            entries.reserve(keyCount);
+
+            for (uint16_t i = 0; i < keyCount; i++) {
+                auto key = readLNT(*this);
+                if (!key) {
+                    Logging::error("SMLUA", "Failed to convert key to LNT (rx)");
+                    return;
+                }
+
+                auto value = readLNT(*this);
+                if (!value) {
+                    Logging::error("SMLUA", "Failed to convert value to LNT (tx)");
+                    return;
+                }
+
+                entries.emplace_back(std::move(*key), std::move(*value));
+            }
+
+            gSMLua.callHook(HookEventType::ON_PACKET_RECEIVE, [&entries](lua_State *L) {
+                lua_newtable(L);
+                for (const auto &[key, value] : entries) {
+                    gSMLua.pushLNT(key);
+                    gSMLua.pushLNT(value);
+                    lua_settable(L, -3);
+                }
+                return 1;
+            });
+            break;
+        }
+        case PacketType::LUA_CUSTOM_BYTESTRING: {
+            uint16_t modIndex = read<uint16_t>();
+            uint16_t byteStringLen = read<uint16_t>();
+            
+            Logging::info("SERVER", "[{}] PACKET_LUA_CUSTOM_BYTESTRING received: modIndex {}, byteStringLen {}", senderIdentifier, modIndex, byteStringLen);
+
+            if (byteStringLen == 0 || byteStringLen > 2985) {
+                Logging::error("SERVER", "Received lua custom bytestring packet with an invalid length: {}", byteStringLen);
+                return;
+            }
+
+            static char byteString[2986] = "";
+            for (uint16_t i = 0; i < byteStringLen; i++) {
+                byteString[i] = read<char>();
+            }
+
+            gSMLua.callHook(HookEventType::ON_PACKET_BYTESTRING_RECEIVE, [&](lua_State *L) {
+                lua_pushlstring(L, byteString, byteStringLen);
+                return 1;
+            });
             break;
         }
         default: {

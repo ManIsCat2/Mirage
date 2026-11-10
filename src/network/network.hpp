@@ -93,8 +93,6 @@ public:
 
 class CoopNetNetworkSystem : public NetworkSystem {
 private:
-    uint64_t localUserId = 0;
-    uint64_t localLobbyId = 0;
     bool needsLobbyCreate = false;
 
     static void onConnected(uint64_t userId);

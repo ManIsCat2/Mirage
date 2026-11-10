@@ -5,9 +5,9 @@
 #include "log.hpp"
 #include "structs.hpp"
 #include "globals.hpp"
+#include "util.hpp"
 #include <iostream>
 #include <filesystem>
-#include <lualib.h>
 
 namespace fs = std::filesystem;
 
@@ -50,6 +50,35 @@ bool SMLua::init() {
 
     lua_register(L, "network_is_server", [](lua_State *L) {
         lua_pushboolean(L, true);
+        return 1;
+    });
+
+    lua_register(L, "get_coopnet_id", [](lua_State *L) {
+        lua_Integer index = luaL_checkinteger(L, 1);
+        if (!isValidGlobalIndex(index)) {
+            return luaL_error(L, "player index %d out of range", (int)index);
+        }
+
+        uint64_t peer = gNetworkPlayers[(size_t)index].endpoint.peerId;
+        uint64_t coopNetId = gCoopNetIds[peer];
+
+        std::string id = std::to_string(coopNetId);
+        lua_pushlstring(L, id.c_str(), id.size());
+        return 1;
+    });
+
+    lua_register(L, "clock_elapsed", [](lua_State *L) {
+        lua_pushnumber(L, (float)clockElapsed());
+        return 1;
+    });
+
+    lua_register(L, "clock_elapsed_f64", [](lua_State *L) {
+        lua_pushnumber(L, clockElapsed());
+        return 1;
+    });
+
+    lua_register(L, "clock_elapsed_ticks", [](lua_State *L) {
+        lua_pushinteger(L, clockElapsedNano() * 3 / 100000000);
         return 1;
     });
 
@@ -159,8 +188,8 @@ void SMLua::callHook(HookEventType hookType) {
         }
     }
 }
-template <typename F>
-void SMLua::callHook(HookEventType hookType, F &&pushArgs) {
+
+void SMLua::callHook(HookEventType hookType, const std::function<int(lua_State *)> &pushArgs) {
     auto it = registeredHooks.find(hookType);
     if (it == registeredHooks.end()) return;
 
@@ -177,6 +206,31 @@ void SMLua::callHook(HookEventType hookType, F &&pushArgs) {
             Logging::error("SMLUA", "error executing hook {} callback: {}", static_cast<int>(hookType), lua_tostring(L, -1));
             lua_pop(L, 1);
         }
+    }
+}
+
+void SMLua::pushLNT(const LSTNetworkValue &lnt) {
+    switch (lnt.type) {
+        case LSTNetworkType::INTEGER:
+            lua_pushinteger(L, std::get<int64_t>(lnt.value));
+            break;
+        case LSTNetworkType::NUMBER:
+            lua_pushnumber(L, std::get<double>(lnt.value));
+            break;
+        case LSTNetworkType::BOOLEAN:
+            lua_pushboolean(L, std::get<bool>(lnt.value));
+            break;
+        case LSTNetworkType::STRING: {
+            const auto &s = std::get<std::string>(lnt.value);
+            lua_pushlstring(L, s.data(), s.size());
+            break;
+        }
+        case LSTNetworkType::NIL:
+            lua_pushnil(L);
+            break;
+        default:
+            lua_pushnil(L);
+            break;
     }
 }
 

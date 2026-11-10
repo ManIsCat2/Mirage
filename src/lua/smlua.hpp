@@ -3,8 +3,10 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 #include <lua.hpp>
 #include "../mod.hpp"
+#include "../network/packet.hpp"
 
 enum class HookEventType {
     UPDATE,
@@ -95,6 +97,9 @@ public:
     bool executeMod(const Mod &mod);
     void registerHook(HookEventType hookType, int funcRef);
     void registerFunc(lua_State *L, const char *name, int (*func)(lua_State *L));
+    void callHook(HookEventType hookType);
+    void callHook(HookEventType hookType, const std::function<int(lua_State *)> &pushArgs);
+    void pushLNT(const LSTNetworkValue &lnt);
 
     lua_State *getState() const { return L; }
 private:
@@ -102,9 +107,6 @@ private:
     std::unordered_map<HookEventType, std::vector<LuaHook>> registeredHooks;
 
     int createModEnv();
-    void callHook(HookEventType hookType);
-    template <typename F>
-    void callHook(HookEventType hookType, F &&pushArgs);
 };
 
 extern SMLua gSMLua;

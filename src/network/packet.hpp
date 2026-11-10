@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <chrono>
 #include <map>
+#include <variant>
 #include <list>
 #include "endpoint.hpp"
 
@@ -79,6 +80,20 @@ enum class PacketLevelMatchType {
     NONE,
     AREA,
     LEVEL
+};
+
+enum class LSTNetworkType {
+    INTEGER,
+    NUMBER,
+    BOOLEAN,
+    STRING,
+    NIL,
+    MAX
+};
+
+struct LSTNetworkValue {
+    LSTNetworkType type = LSTNetworkType::INTEGER;
+    std::variant<std::monostate, double, int64_t, bool, std::string> value;
 };
 
 class Packet {
@@ -158,6 +173,8 @@ public:
             }
         }
     }
+
+    size_t remaining() const { return data.size() - offset; }
 
     std::string getSenderIdentifier(void);
     void sendTo(const Endpoint &dest);

@@ -21,9 +21,13 @@ typedef int socket_t;
 
 constexpr int MAX_PLAYERS = 16;
 
-inline double clockElapsed() {
+inline double clockElapsedNano(void) {
     static const auto start = std::chrono::steady_clock::now();
-    return std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    return std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - start).count();
+}
+
+inline double clockElapsed() {
+    return clockElapsedNano() / 1000000000.0;
 }
 
 inline std::string stringToLower(std::string text) {

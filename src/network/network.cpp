@@ -145,7 +145,6 @@ void NetworkSystem::updateReliables(void) {
 
 void NetworkSystem::updatePlayers(void) {
     double now = clockElapsed();
-    bool canTimeOut = (gServerConfig.networkSystem != NetworkSystemType::SOCKET);
 
     for (int i = 1; i < MAX_PLAYERS; i++) {
         NetworkPlayer *np = &gNetworkPlayers[i];
@@ -164,7 +163,7 @@ void NetworkSystem::updatePlayers(void) {
         NetworkPlayer *np = &gNetworkPlayers[i];
         if (!np->connected) { continue; }
 
-        if (canTimeOut && now - np->lastReceived > NETWORK_PLAYER_TIMEOUT) {
+        if (now - np->lastReceived > NETWORK_PLAYER_TIMEOUT) {
             Logging::info("SERVER", "dropping globalIndex {} for network inactivity", i);
             uint8_t globalIndex = gNetworkPlayers[i].globalIndex;
             Endpoint &ep = gNetworkPlayers[i].endpoint;
@@ -303,7 +302,7 @@ void CoopNetNetworkSystem::shutdown(void) {
 
 void CoopNetNetworkSystem::poll(void) {
     coopnet_update();
-    if (needsLobbyCreate && localUserId != 0) {
+    if (needsLobbyCreate) {
         needsLobbyCreate = false;
         CoopNetRc rc = coopnet_lobby_create(gServerConfig.game.c_str(), gServerConfig.version.c_str(), gServerConfig.name.c_str(), gServerConfig.mode.c_str(), gServerConfig.maxPlayers, gServerConfig.password.c_str(), gServerConfig.description.c_str());
         if (rc == COOPNET_OK) {
