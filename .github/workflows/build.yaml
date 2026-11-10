@@ -13,10 +13,10 @@ jobs:
                 runner: ubuntu-24.04
                 cxx: g++
                 bits32: 0
-              - name: ARM
-                runner: ubuntu-24.04-arm
-                cxx: arm-linux-gnueabihf-g++
-                bits32: 1
+              #- name: ARM
+              #  runner: ubuntu-24.04-arm
+              #  cxx: arm-linux-gnueabihf-g++
+              #  bits32: 1
               - name: ARM64
                 runner: ubuntu-24.04-arm
                 cxx: aarch64-linux-gnu-g++
@@ -30,7 +30,7 @@ jobs:
             - name: Install dependencies
               run: |
                 sudo apt update
-                sudo apt install -y build-essential g++-arm-linux-gnueabihf g++-aarch64-linux-gnu zlib1g-dev
+                sudo apt install -y build-essential g++-arm-linux-gnueabihf g++-aarch64-linux-gnu zlib1g-dev liblua5.4-dev
                 if [ "${{ matrix.arch.name }}" == "ARM" ]; then
                     sudo dpkg --add-architecture armhf
                     sudo apt update
