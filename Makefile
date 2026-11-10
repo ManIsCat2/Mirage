@@ -3,8 +3,8 @@ TARGET := Mirage
 BUILD_DIR := build
 CXX := clang++
 ASAN := 0
-CXXFLAGS := -O3 -Iinclude $(shell pkg-config --cflags lua5.4) -std=c++23 -MMD -MP
-LDFLAGS := -lz $(shell pkg-config --libs lua5.4)
+CXXFLAGS := -O3 -Iinclude -Iinclude/lua -std=c++23 -MMD -MP
+LDFLAGS := -lz
 
 WINDOWS_BUILD := 0
 LINUX_BUILD := 0
@@ -44,7 +44,7 @@ COOPNET_LIB :=
 # setup linker flags
 ifeq ($(WINDOWS_BUILD),1)
 	CXX := g++ # use g++ for the c++ compiler by default
-	LDFLAGS += -Llib/win64 -lcoopnet -ljuice -lws2_32 -liphlpapi -lbcrypt -static
+	LDFLAGS += -Llib/win64 -lcoopnet -ljuice -llua -lws2_32 -liphlpapi -lbcrypt -static
 else ifeq ($(OSX_BUILD),1)
 	ifeq ($(ARM_BUILD),1)
 		LDFLAGS += -Llib/mac_arm -lcoopnet -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
@@ -58,12 +58,12 @@ else ifeq ($(OSX_BUILD),1)
 else
 	ifeq ($(ARM_BUILD),1)
 		ifeq ($(BITS_32),1)
-			LDFLAGS += -Llib/linux/arm -lcoopnet -ljuice -ldl -lpthread
+			LDFLAGS += -Llib/linux/arm -lcoopnet -ljuice -llua -ldl -lpthread
 		else
-			LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -ldl -lpthread
+			LDFLAGS += -Llib/linux/aarch64 -lcoopnet -ljuice -llua -ldl -lpthread
 		endif
 	else
-		LDFLAGS += -Llib/linux/x86_64 -lcoopnet -ljuice -ldl -lpthread
+		LDFLAGS += -Llib/linux/x86_64 -lcoopnet -ljuice -llua -ldl -lpthread
 	endif
 endif
 
