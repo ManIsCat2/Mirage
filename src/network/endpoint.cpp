@@ -28,8 +28,7 @@ NetworkPlayer *Endpoint::getPlayer() {
 bool Endpoint::isAllowed(void) const {
     if (isPeer()) {
         if (gServerConfig.whitelist.size() > 0) {
-            if (std::find(gServerConfig.whitelist.begin(), gServerConfig.whitelist.end(), gCoopNetIds[peerId]) != gServerConfig.whitelist.end()) {
-            } else {
+            if (std::find(gServerConfig.whitelist.begin(), gServerConfig.whitelist.end(), gCoopNetIds[peerId]) == gServerConfig.whitelist.end()) {
                 return false;
             }
         }

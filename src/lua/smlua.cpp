@@ -109,11 +109,6 @@ void SMLua::registerHook(HookEventType hookType, int funcRef) {
     registeredHooks[hookType].push_back({funcRef});
 }
 
-void SMLua::registerFunc(lua_State *L, const char *name, int (*func)(lua_State *L)) {
-    lua_pushcfunction(L, func);
-    lua_setglobal(L, name);
-}
-
 int SMLua::createModEnv() {
     lua_newtable(L);
     lua_newtable(L);

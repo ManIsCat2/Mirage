@@ -96,7 +96,6 @@ public:
 
     bool executeMod(const Mod &mod);
     void registerHook(HookEventType hookType, int funcRef);
-    void registerFunc(lua_State *L, const char *name, int (*func)(lua_State *L));
     void callHook(HookEventType hookType);
     void callHook(HookEventType hookType, const std::function<int(lua_State *)> &pushArgs);
     void pushLNT(const LSTNetworkValue &lnt);
