@@ -307,7 +307,7 @@ std::vector<uint8_t> Packet::compress(void) {
 std::string Packet::getSenderIdentifier(void) {
     NetworkPlayer *senderNp = sender.getPlayer();
     const std::string &ipv4 = getIPString(&sender.addr);
-    const std::string &coopnetId = std::to_string(gCoopNetIds[sender.peerId]);
+    const std::string &coopNetId = std::to_string(gCoopNetIds[sender.peerId]);
     std::string ident;
 
     if (gServerConfig.networkSystem == NetworkSystemType::SOCKET) {
@@ -315,7 +315,7 @@ std::string Packet::getSenderIdentifier(void) {
     } else if (gServerConfig.networkSystem == NetworkSystemType::COOPNET) {
         ident = std::to_string(gCoopNetIds[sender.peerId]);
     } else {
-        ident = std::format("{}", sender.isPeer() ? coopnetId : ipv4);
+        ident = std::format("{}", sender.isPeer() ? coopNetId : ipv4);
     }
     return ident;
 }
@@ -465,6 +465,11 @@ void Packet::execute() {
     NetworkPlayer *senderNp = sender.getPlayer();
     const uint8_t senderGlobalIndex = senderNp ? senderNp->globalIndex : 0;
     const std::string &senderIdentifier = getSenderIdentifier();
+
+    if ((!senderNp || (senderNp && !senderNp->connected)) && type != PacketType::JOIN_REQUEST && type != PacketType::MOD_LIST_REQUEST && type != PacketType::DOWNLOAD_REQUEST && type != PacketType::ACK) {
+        Logging::info("SERVER", "[{}] packet {:#02x} rejected: sender unknown", senderIdentifier, static_cast<int>(type));
+        return;
+    }
 
     switch (type) {
         case PacketType::ACK: {
@@ -996,13 +1001,10 @@ void Packet::execute() {
                 return;
             }
 
-            static char byteString[2986] = "";
-            for (uint16_t i = 0; i < byteStringLen; i++) {
-                byteString[i] = read<char>();
-            }
+            std::string byteString = read<std::string>(byteStringLen);
 
             gSMLua.callHook(HookEventType::ON_PACKET_BYTESTRING_RECEIVE, [&](lua_State *L) {
-                lua_pushlstring(L, byteString, byteStringLen);
+                lua_pushlstring(L, byteString.c_str(), byteStringLen);
                 return 1;
             });
             break;
