@@ -59,12 +59,12 @@ jobs:
             - name: Install dependencies
               uses: msys2/setup-msys2@v2
               with:
-                msystem: ucrt64
+                msystem: mingw64
                 update: true
                 install: >
                     make
-                    mingw-w64-ucrt-x86_64-gcc
-                    mingw-w64-ucrt-x86_64-zlib
+                    mingw-w64-x86_64-gcc
+                    mingw-w64-x86_64-zlib
 
             - name: Build
               run: make -j12
