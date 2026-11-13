@@ -64,17 +64,16 @@ public:
 
     virtual bool init(int port) = 0;
     virtual void shutdown(void) = 0;
-    virtual void update(void) = 0;
     virtual void poll(void) = 0;
     virtual void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) = 0;
     virtual bool requireServerBroadcast(void) const = 0;
 
     void sendToPlayer(int globalIndex, const uint8_t *data, size_t len);
     void sendToAll(const uint8_t *data, size_t len, int ignoreIndex = -1);
+    void updateNetwork(void);
 protected:
     void updateReliables(void);
     void updatePlayers(void);
-    void updateNetwork(void);
 };
 
 class SocketNetworkSystem : public NetworkSystem {
@@ -83,7 +82,6 @@ private:
 public:
     bool init(int port) override;
     void shutdown(void) override;
-    void update(void) override;
     void poll(void) override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast(void) const override { return true; }
@@ -107,7 +105,6 @@ private:
 public:
     bool init(int port) override;
     void shutdown(void) override;
-    void update(void) override;
     void poll(void) override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast(void) const override { return false; }
@@ -121,7 +118,6 @@ public:
     HybridNetworkSystem();
     bool init(int port) override;
     void shutdown(void) override;
-    void update(void) override;
     void poll() override;
     void sendTo(const Endpoint &dest, const uint8_t *data, size_t len) override;
     bool requireServerBroadcast(void) const override { return true; }

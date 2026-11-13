@@ -25,16 +25,12 @@ UDPSocket::UDPSocket(int port) {
         exit(1);
     }
 
-    int opt = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&opt), sizeof(opt));
 #ifdef _WIN32
-    DWORD timeout = 10;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+    u_long mode = 1;
+    ioctlsocket(sock, FIONBIO, &mode);
 #else
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 10000; // 10ms
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&tv), sizeof(tv));
+    int flags = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 #endif
 
     sockaddr_in serverAddr{};

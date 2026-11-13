@@ -13,6 +13,7 @@ typedef int socklen_t;
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <fcntl.h>
 typedef int socket_t;
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1

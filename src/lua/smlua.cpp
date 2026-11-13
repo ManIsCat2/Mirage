@@ -82,6 +82,22 @@ bool SMLua::init() {
         return 1;
     });
 
+    lua_register(L, "djui_popup_create_global", [](lua_State *L) {
+        size_t len = 0;
+        const char *msg = luaL_checklstring(L, 1, &len);
+        int lines = luaL_checkinteger(L, 2);
+
+        std::string message(msg, len);
+
+        auto outPkt = Packet::createOutgoing(PacketType::GLOBAL_POPUP, true);
+        outPkt.write<int>(lines);
+        outPkt.write<int16_t>(message.length());
+        outPkt.write<std::string>(message, message.length());
+        outPkt.sendToAll();
+
+        return 0;
+    });
+
     initLuaGlobalBindings(L);
     registerLuaGlobals();
 

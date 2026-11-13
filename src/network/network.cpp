@@ -215,11 +215,6 @@ void SocketNetworkSystem::poll(void) {
     }
 }
 
-void SocketNetworkSystem::update(void) {
-    poll();
-    updateNetwork();
-}
-
 void SocketNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size_t len) {
     if (!udpSock) return;
     sendto(udpSock->getSock(), reinterpret_cast<const char*>(data), len, 0, (struct sockaddr*)&dest.addr, sizeof(dest.addr));
@@ -228,6 +223,11 @@ void SocketNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size
 void CoopNetNetworkSystem::onConnected(uint64_t userId) {
     Logging::info("NETWORK", "connected to coopnet as user {}", userId);
     gNetworkPlayers[0].endpoint = Endpoint::fromPeer(userId);
+
+    CoopNetRc rc = coopnet_lobby_create(gServerConfig.game.c_str(), gServerConfig.version.c_str(), gServerConfig.name.c_str(), gServerConfig.mode.c_str(), gServerConfig.maxPlayers, gServerConfig.password.c_str(), gServerConfig.description.c_str());
+    if (rc == COOPNET_OK) {
+        Logging::info("NETWORK", "created coopnet lobby successfully");
+    }
 }
 
 void CoopNetNetworkSystem::onDisconnected(bool intentional) {
@@ -302,19 +302,6 @@ void CoopNetNetworkSystem::shutdown(void) {
 
 void CoopNetNetworkSystem::poll(void) {
     coopnet_update();
-    if (needsLobbyCreate) {
-        needsLobbyCreate = false;
-        CoopNetRc rc = coopnet_lobby_create(gServerConfig.game.c_str(), gServerConfig.version.c_str(), gServerConfig.name.c_str(), gServerConfig.mode.c_str(), gServerConfig.maxPlayers, gServerConfig.password.c_str(), gServerConfig.description.c_str());
-        if (rc == COOPNET_OK) {
-            Logging::info("NETWORK", "created coopnet lobby successfully");
-        }
-    }
-}
-
-void CoopNetNetworkSystem::update(void) {
-    poll();
-    updateNetwork();
-    std::this_thread::sleep_for(std::chrono::milliseconds(33));
 }
 
 void CoopNetNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size_t len) {
@@ -342,12 +329,6 @@ void HybridNetworkSystem::shutdown(void) {
 void HybridNetworkSystem::poll(void) {
     socketSys->poll();
     coopSys->poll();
-}
-
-void HybridNetworkSystem::update(void) {
-    poll();
-    updateNetwork();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 void HybridNetworkSystem::sendTo(const Endpoint &dest, const uint8_t *data, size_t len) {
