@@ -24,7 +24,7 @@ sudo dnf install make clang zlib-devel
 
 ### Windows (MinGW)
 ```bash
-pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-zlib
+pacman -S mingw-w64-ucrt64-x86_64-toolchain mingw-w64-ucrt-x86_64-zlib
 ```
 
 ## 2. Clone the Repository

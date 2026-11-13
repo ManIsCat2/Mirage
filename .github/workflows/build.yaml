@@ -47,14 +47,7 @@ jobs:
                 path: ./build/Mirage
     
     build-windows:
-        strategy:
-          matrix:
-            arch:
-              - name: Win64
-                sys: mingw64
-                env: x86_64
-        
-        name: Windows ${{ matrix.arch.name }}
+        name: Windows Win64
         runs-on: windows-latest
         defaults:
             run:
@@ -66,12 +59,12 @@ jobs:
             - name: Install dependencies
               uses: msys2/setup-msys2@v2
               with:
-                msystem: ${{ matrix.arch.sys }}
+                msystem: ucrt64
                 update: true
                 install: >
                     make
-                    mingw-w64-${{ matrix.arch.env }}-gcc
-                    mingw-w64-${{ matrix.arch.env }}-zlib
+                    mingw-w64-ucrt64-x86_64-gcc
+                    mingw-w64-ucrt64-x86_64-zlib
 
             - name: Build
               run: make -j12
@@ -79,5 +72,5 @@ jobs:
             - name: Upload
               uses: actions/upload-artifact@v4
               with:
-                name: mirage-windows-${{ matrix.arch.env }}
+                name: mirage-windows-x86_64
                 path: ./build/Mirage.exe
