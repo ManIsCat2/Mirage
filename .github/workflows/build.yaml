@@ -63,8 +63,8 @@ jobs:
                 update: true
                 install: >
                     make
-                    mingw-w64-ucrt64-x86_64-gcc
-                    mingw-w64-ucrt64-x86_64-zlib
+                    mingw-w64-ucrt-x86_64-gcc
+                    mingw-w64-ucrt-x86_64-zlib
 
             - name: Build
               run: make -j12
