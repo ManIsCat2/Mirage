@@ -19,11 +19,28 @@ static int libKickPlayer(lua_State *L) {
     outPkt = Packet::createOutgoing(PacketType::LEAVING, true);
     outPkt.write<uint8_t>(index);
     outPkt.sendToAll();
-    return 1;
+    return 0;
+}
+
+static int libSendChatMessage(lua_State *L) {
+    size_t len = 0;
+    const char *msg = luaL_checklstring(L, 1, &len);
+
+    if (len >= MAX_CHAT_MSG_LENGTH) {
+        len = MAX_CHAT_MSG_LENGTH - 1;
+    }
+
+    auto outPkt = Packet::createOutgoing(PacketType::CHAT, true);
+    outPkt.write<uint8_t>(0);
+    outPkt.write<uint16_t>(len);
+    outPkt.write<std::string>(msg, len);
+    outPkt.sendToAll();
+    return 0;
 }
 
 static const luaL_Reg kMirageFuncs[] = {
     {"kickPlayer", libKickPlayer},
+    {"sendChatMessage", libSendChatMessage},
     {nullptr, nullptr},
 };
 
