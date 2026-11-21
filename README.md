@@ -27,6 +27,11 @@ sudo dnf install make clang zlib-devel
 pacman -S mingw-w64-x86_64-toolchain mingw-w64-x86_64-zlib
 ```
 
+### Android (Termux)
+```bash
+pkg install build-essential clang zlib lua53
+```
+
 ## 2. Clone the Repository
 
 ```bash
@@ -50,4 +55,4 @@ Or on Windows:
 ```bash
 ./build/Mirage.exe
 ```
-Note: Running it for the first time generates a JSON configuration file. Edit this file and restart Mirage to apply your  settings.
+Note: Running it for the first time generates a JSON configuration file. Edit this file and restart Mirage to apply your settings.
