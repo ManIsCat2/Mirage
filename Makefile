@@ -9,6 +9,7 @@ LDFLAGS := -lz
 WINDOWS_BUILD := 0
 LINUX_BUILD := 0
 OSX_BUILD := 0
+ANDROID_BUILD := 0
 
 ARM_BUILD := 0
 BITS_32 := 0
@@ -27,7 +28,12 @@ else ifeq ($(shell uname -s),Darwin)
 		ARM_BUILD := 1
 	endif
 else
-	LINUX_BUILD := 1
+	ifneq ($(shell command -v termux-setup-storage),)
+		ANDROID_BUILD := 1
+	else
+		LINUX_BUILD := 1
+	endif
+
 	machine = $(shell sh -c 'uname -m 2>/dev/null || echo unknown')
 	ifneq (,$(findstring aarch64,$(machine)))
 		ARM_BUILD := 1
@@ -54,6 +60,16 @@ else ifeq ($(OSX_BUILD),1)
 		LDFLAGS += -Llib/mac_intel -lcoopnet -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -Wl,-rpath,@executable_path
 		COOPNET_LIB += ./lib/mac_intel/libcoopnet.dylib
 		COOPNET_LIB += ./lib/mac_intel/libjuice.1.6.2.dylib
+	endif
+else ifeq ($(ANDROID_BUILD),1)
+	ifeq ($(ARM_BUILD),1)
+		ifeq ($(BITS_32),1)
+			$(error 32 bit Android is not supported)
+		else
+			LDFLAGS += -Llib/android/arm64-v8a -lcoopnet -ljuice -llua5.3 -ldl -lpthread
+		endif
+	else
+		LDFLAGS += -Llib/android/x86_64 -lcoopnet -ljuice -llua5.3 -ldl -lpthread
 	endif
 else
 	ifeq ($(ARM_BUILD),1)
