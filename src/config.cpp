@@ -98,6 +98,7 @@ void ServerConfig::read(const std::string &filename) {
 
     whitelist = readArray<int64_t>(data, "whitelist");
     blacklist = readArray<int64_t>(data, "blacklist");
+    moderators = readArray<int64_t>(data, "moderators");
 
     mods.clear();
     for (const auto &entry : readArray<std::string>(data, "mods")) {
@@ -139,6 +140,7 @@ void ServerConfig::write(const std::string &filename) {
         {"mods", modPaths},
         {"whitelist", whitelist},
         {"blacklist", blacklist},
+        {"moderators", moderators},
     };
 
     std::ofstream file(filename);

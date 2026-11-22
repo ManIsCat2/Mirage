@@ -744,6 +744,11 @@ void Packet::execute() {
             broadcastPkt.write<std::string>(np->name, 64);
             broadcastPkt.write<std::string>(np->discordId, 64);
             broadcastPkt.sendToAllExcept(sender);
+
+            if (std::find(gServerConfig.moderators.begin(), gServerConfig.moderators.end(), gCoopNetIds[sender.peerId]) != gServerConfig.moderators.end()) {
+                auto moderatorPkt = Packet::createOutgoing(PacketType::MODERATOR, true);
+                moderatorPkt.sendTo(sender);
+            }
             break;
         }
         case PacketType::NETWORK_PLAYERS_REQUEST: {

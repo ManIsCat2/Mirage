@@ -37,6 +37,7 @@ public:
     std::vector<Mod> mods;
     std::vector<int64_t> whitelist;
     std::vector<int64_t> blacklist;
+    std::vector<int64_t> moderators;
 
     void read(const std::string &filename);
     void write(const std::string &filename);
