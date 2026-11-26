@@ -39,9 +39,9 @@ struct NetworkPlayer {
     uint8_t currLevelSyncValid = 0;
     uint8_t currAreaSyncValid = 0;
     int64_t networkId = 0;
-    float lastReceived;
-    float lastSent;
-    float lastPingSent;
+    double lastReceived;
+    double lastSent;
+    double lastPingSent;
     uint8_t modelIndex = 0;
     uint32_t ping = 0;
     PlayerPalette palette{};
